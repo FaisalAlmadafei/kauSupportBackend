@@ -44,7 +44,7 @@ public class FacultyMember_Controller : ControllerBase
     [Route("GetDevices")]
     public async Task<ActionResult> getDevices()
     {
-        var response = await conn.QueryAsync<Device>("select * from  [kauSupport].[dbo].[Devices]");
+        var response = await conn.QueryAsync<Device>("select * from  [kauSupport].[dbo].[Devices] ORDER BY deviceNumber");
         if (response.Any())
         {
             return Ok(response); 
@@ -61,34 +61,49 @@ public class FacultyMember_Controller : ControllerBase
     [Route("GetLabDevices/ID=" + "{lab_Number}")]
     public async Task<ActionResult> getLabDevices(string lab_Number )
     {
-        var response = await conn.QueryAsync<Device>("select * from  [kauSupport].[dbo].[Devices] where deviceLocatedLab = @deviceLocatedLab" , new {deviceLocatedLab = lab_Number});
+        var response = await conn.QueryAsync<Device>("select * from  [kauSupport].[dbo].[Devices] where deviceLocatedLab = @deviceLocatedLab ORDER BY deviceNumber" , new {deviceLocatedLab = lab_Number});
         return Ok(response); 
     }
     //-----------------------------------------------------------------------------------------
 
     [HttpPost]
     [Route("AddReport")]
-    //TODO Add cockie ... 
-
-
+    
     public async Task<ActionResult> addReport(String Device_Number , String Serial_Number, String Device_LocatedLab , String Problem_Description  , String Reported_By)
     {
         DateTime currentDateTime = DateTime.Now.Date;
+        if (!IsDeviceReportable(Serial_Number))
+        {
+            return BadRequest("Device cannot be reported again within 3 days.");
+        }
         string Report_Type = "issue"; 
         await conn.ExecuteAsync("INSERT INTO  [kauSupport].[dbo].[Reports] ( deviceNumber, serialNumber,deviceLocatedLab, reportType , problemDescription, reportedBy , reportDate) values ( @deviceNumber, @serialNumber, @deviceLocatedLab, @reportType , @problemDescription, @reportedBy ,@reportDate ) ", new { deviceNumber= Device_Number, serialNumber= Serial_Number,deviceLocatedLab = Device_LocatedLab, reportType =Report_Type  , problemDescription = Problem_Description, reportedBy= Reported_By , reportDate = currentDateTime });
         string status = "Reported"; 
         await conn.ExecuteAsync( "UPDATE [kauSupport].[dbo].[Devices] SET deviceStatus = @deviceStatus WHERE serialNumber = @serialNumber; ", new {serialNumber = Serial_Number  , deviceStatus = status });
-        return Ok(true); 
+        
+        HttpContext.Response.Cookies.Append(
+            "ReportedDevice_" + Serial_Number,
+            currentDateTime.ToString(),
+            new CookieOptions
+            {
+                Expires = DateTime.Now.AddDays(3) // Set the cookie to expire in 3 days
+            });
+        return Ok("Reported added successfully"); 
     }
-    //-----------------------------------------------------------------------------------------
-    [HttpGet]
-    [Route("GetReports")]
-    public async Task<ActionResult> getReports()
-    {
-        var response = await conn.QueryAsync<Report>("select * from  [kauSupport].[dbo].[Reports]");
-        return Ok(response); 
-    }
-    
+   // -----------------------------------------------------------------------------------------
+   private bool IsDeviceReportable(string serialNumber)
+   {
+       // Check if the cookie exists and if the device has been reported within the last 3 days
+       var cookieValue = HttpContext.Request.Cookies["ReportedDevice_" + serialNumber];
+
+       if (!string.IsNullOrEmpty(cookieValue) && DateTime.TryParse(cookieValue, out var lastReportDate))
+       {
+           return (DateTime.Now - lastReportDate).Days >= 3;
+       }
+
+       return true; // The device can be reported if there's no cookie or if the last report is older than 3 days
+   }
+   
     //-----------------------------------------------------------------------------------------
     [HttpGet]
     [Route("GetMyReports")]
@@ -123,7 +138,9 @@ public class FacultyMember_Controller : ControllerBase
                 {
                     LabNumber = lab.labNumber ,
                     ReportedDevicesCount = reportedCount,
-                    WorkingDevicesCount = workingCount
+                    WorkingDevicesCount = workingCount,
+                    Capacity = lab.labCapacity,
+                    TotalDevices = reportedCount + workingCount
                 }
                 
                 );
