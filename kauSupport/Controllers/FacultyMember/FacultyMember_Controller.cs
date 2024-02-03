@@ -18,8 +18,9 @@ public class FacultyMember_Controller : ControllerBase
         this.config = config;
         conn = conn = new SqlConnection(config.GetConnectionString("DefaultConnection"));
     }
+    //------------------------------------------------------------------------------------------------------------------
 
-    //-----------------------------------------------------------------------------------------
+    //-----------------------------------------------------Get all Labs-------------------------------------------------
     [HttpGet]
     [Route("GetLabs")]
     public async Task<ActionResult> getLabs()
@@ -35,8 +36,9 @@ public class FacultyMember_Controller : ControllerBase
             return BadRequest("No Labs found...");
         }
     }
-    //-----------------------------------------------------------------------------------------
+    //------------------------------------------------------------------------------------------------------------------
 
+    //--------------------------------Get all Devices-------------------------------------------------------------------
     [HttpGet]
     [Route("GetDevices")]
     public async Task<ActionResult> getDevices()
@@ -53,8 +55,9 @@ public class FacultyMember_Controller : ControllerBase
             return BadRequest("No devices found...");
         }
     }
-    //-----------------------------------------------------------------------------------------
+    //------------------------------------------------------------------------------------------------------------------
 
+    //--------------------------------Get all Devices in a specific Lab-------------------------------------------------
     [HttpGet]
     [Route("GetLabDevices/ID=" + "{lab_Number}")]
     public async Task<ActionResult> getLabDevices(string lab_Number)
@@ -69,11 +72,12 @@ public class FacultyMember_Controller : ControllerBase
 
         else
         {
-            return BadRequest("No devices found...");
+            return BadRequest("No devices found in this Lab...");
         }
     }
-    //-----------------------------------------------------------------------------------------
+    //------------------------------------------------------------------------------------------------------------------
 
+    //--------------------------------Add new report on a device--------------------------------------------------------
     [HttpPost]
     [Route("AddReport")]
     public async Task<ActionResult> addReport([Required] String Device_Number, [Required] String Serial_Number,
@@ -82,23 +86,28 @@ public class FacultyMember_Controller : ControllerBase
     {
         DateTime currentDateTime = DateTime.Now.Date;
         string Report_Type = "issue";
+
         if (!IsDeviceReportable(Serial_Number))
         {
             return Conflict("This device is reported, try again within 3 days.");
         }
-        // we will get adminId
-        var adminID = await conn.QueryFirstOrDefaultAsync<User>("select UserId from  [kauSupport].[dbo].[Users] WHERE role = @role" , 
-            new {role = "Supervisor"});
 
-       var Report_ID= await conn.QuerySingleAsync<int>(
+        // we will get the Admin or supervisor to use their ID
+        var Supervisor = await conn.QueryFirstOrDefaultAsync<User>(
+            "select UserId from  [kauSupport].[dbo].[Users] WHERE role = @role",
+            new { role = "Supervisor" });
+
+        // we will add new report and get the report ID
+        var Report_ID = await conn.QuerySingleAsync<int>(
             "INSERT INTO  [kauSupport].[dbo].[Reports] ( deviceNumber, serialNumber,deviceLocatedLab, reportType , problemDescription, reportedBy , reportDate, assignedTaskTo) values" +
             " ( @deviceNumber, @serialNumber, @deviceLocatedLab, @reportType , @problemDescription, @reportedBy ,@reportDate, @assignedTaskTo );  SELECT CAST(SCOPE_IDENTITY() as int); ",
             new
             {
                 deviceNumber = Device_Number, serialNumber = Serial_Number, deviceLocatedLab = Device_LocatedLab,
                 reportType = Report_Type, problemDescription = Problem_Description, reportedBy = Reported_By,
-                reportDate = currentDateTime, assignedTaskTo = adminID.UserId
+                reportDate = currentDateTime, assignedTaskTo = Supervisor.UserId
             });
+
         string status = "Reported";
         await conn.ExecuteAsync(
             "UPDATE [kauSupport].[dbo].[Devices] SET deviceStatus = @deviceStatus WHERE serialNumber = @serialNumber; ",
@@ -111,21 +120,22 @@ public class FacultyMember_Controller : ControllerBase
             {
                 Expires = DateTime.Now.AddDays(3) // Set the cookie to expire in 3 days
             });
-        
-        
+
+        // We weill add new notification 
         await conn.ExecuteAsync(
             "INSERT INTO  [kauSupport].[dbo].[Notifications] ( reportId, userId, NotificationType) values (@reportId, @userId, @NotificationType ) ",
             new
             {
-                reportId = Report_ID, 
-                userId = adminID.UserId, // Supervisor ID by defualt
+                reportId = Report_ID,
+                userId = Supervisor.UserId,
                 NotificationType = "issue"
             });
-        
+
         return Ok("Report added successfully");
     }
+    //------------------------------------------------------------------------------------------------------------------
 
-    // -----------------------------------------------------------------------------------------
+    //--------------------------This is a method that check if device is reported---------------------------------------
     private bool IsDeviceReportable(string serialNumber)
     {
         // Check if the cookie exists and if the device has been reported within the last 3 days
@@ -138,8 +148,9 @@ public class FacultyMember_Controller : ControllerBase
 
         return true; // The device can be reported if there's no cookie or if the last report is older than 3 days
     }
+    //------------------------------------------------------------------------------------------------------------------
 
-    //-----------------------------------------------------------------------------------------
+    //-------------------------------Get user previous reports by userID------------------------------------------------
     [HttpGet]
     [Route("GetMyReports")]
     public async Task<ActionResult> getMyReports([Required] string User_Id)
@@ -153,11 +164,12 @@ public class FacultyMember_Controller : ControllerBase
 
         else
         {
-            return BadRequest("No have not report any device yet...");
+            return BadRequest("You have not report any device yet...");
         }
     }
+    //------------------------------------------------------------------------------------------------------------------
 
-    //-----------------------------------------------------------------------------------------
+    //-------------------------------Get Lab with devices working and reported counts, for monitoring-------------------
     [HttpGet]
     [Route("GetLabsWithDeviceCounts")]
     public async Task<ActionResult> GetLabsWithDeviceCounts()
@@ -166,17 +178,25 @@ public class FacultyMember_Controller : ControllerBase
         var labs = await conn.QueryAsync<Lab>("SELECT * FROM [kauSupport].[dbo].[Labs]");
         var labsWithDeviceCountsList = new List<LabWithDeviceCounts>();
 
+        if (!labs.Any())
+        {
+            return BadRequest("No Labs found");
+        }
+
+        // Now we will lopp over each device
         foreach (var lab in labs)
         {
-            // Use QuerySingleAsync to get a single integer result
+            // Get reports counts
             var reportedCount = await conn.QuerySingleAsync<int>(
                 "SELECT COUNT(*) FROM [kauSupport].[dbo].[Devices] WHERE deviceLocatedLab = @deviceLocatedLab AND deviceStatus = 'Reported'",
                 new { deviceLocatedLab = lab.labNumber });
 
-
+            //Get working devices counts
             var workingCount = await conn.QuerySingleAsync<int>(
                 "SELECT COUNT(*) FROM [kauSupport].[dbo].[Devices] WHERE deviceLocatedLab = @deviceLocatedLab AND deviceStatus = 'Working'",
                 new { deviceLocatedLab = lab.labNumber });
+
+            //Add this to the list
             labsWithDeviceCountsList.Add(
                 new LabWithDeviceCounts
                 {
@@ -191,52 +211,54 @@ public class FacultyMember_Controller : ControllerBase
 
         return Ok(labsWithDeviceCountsList);
     }
-    //-----------------------------------------------------------------------------------------------------------------
+    //------------------------------------------------------------------------------------------------------------------
+
+    //-------------------------------Method for requesting a service such as, unblocking react.js-----------------------
     [HttpPost]
     [Route("RequestService")]
     public async Task<ActionResult> RequestService([Required] string Request_, [Required] string Requested_By)
     {
-        var supervisorID = await conn.QueryFirstOrDefaultAsync<User>("select UserId from  [kauSupport].[dbo].[Users] WHERE role = @role" , 
-            new {role = "Supervisor"});
+        var supervisor = await conn.QueryFirstOrDefaultAsync<User>(
+            "select UserId from  [kauSupport].[dbo].[Users] WHERE role = @role",
+            new { role = "Supervisor" });
 
-       var Request_Id= await conn.QuerySingleAsync<int>
-            ("INSERT INTO [kauSupport].[dbo].[services] (Request, RequestedBy, AssignedTo) VALUES (@Request , @RequestedBy, @AssignedTo); SELECT CAST(SCOPE_IDENTITY() as int)",
+        var Request_Id = await conn.QuerySingleAsync<int>(
+            "INSERT INTO [kauSupport].[dbo].[services] (Request, RequestedBy, AssignedTo) VALUES (@Request , @RequestedBy, @AssignedTo); SELECT CAST(SCOPE_IDENTITY() as int)",
             new
             {
                 Request = Request_,
                 RequestedBy = Requested_By,
-                AssignedTo=supervisorID.UserId
-
+                AssignedTo = supervisor.UserId
             });
 
-       if (Request_Id > 0)
-       {
-           await conn.ExecuteAsync(
-               "INSERT INTO  [kauSupport].[dbo].[Notifications] ( reportId, userId, NotificationType) values (@reportId, @userId, @NotificationType ) ",
-               new
-               {
-                   reportId = Request_Id, 
-                   userId = supervisorID.UserId, // Supervisor ID by defualt
-                   NotificationType = "Service Request"
-               });
-           
-           return Ok(("Request added successfully"));
-           
-       }
-       else
-       {
-           return BadRequest("Could not add request"); 
-       }
+        if (Request_Id > 0)
+        {
+            await conn.ExecuteAsync(
+                "INSERT INTO  [kauSupport].[dbo].[Notifications] ( reportId, userId, NotificationType) values (@reportId, @userId, @NotificationType ) ",
+                new
+                {
+                    reportId = Request_Id,
+                    userId = supervisor.UserId,
+                    NotificationType = "Service Request"
+                });
 
+            return Ok("Request added successfully");
+        }
+        else
+        {
+            return BadRequest("Could not add request");
+        }
     }
-    //-----------------------------------------------------------------------------------------------------------------
+    //------------------------------------------------------------------------------------------------------------------
 
+    //---------------------------------------Get user requests with userID----------------------------------------------
     [HttpGet]
     [Route("GetMyRequests")]
     public async Task<ActionResult> getMyRequests([Required] string User_Id)
     {
         var response = await conn.QueryAsync<Service>(
-            "select * from  [kauSupport].[dbo].[Services] where RequestedBy= @RequestedBy", new { RequestedBy = User_Id });
+            "select * from  [kauSupport].[dbo].[Services] where RequestedBy= @RequestedBy",
+            new { RequestedBy = User_Id });
         if (response.Any())
         {
             return Ok(response);
@@ -247,6 +269,5 @@ public class FacultyMember_Controller : ControllerBase
             return BadRequest("No have not report any device yet...");
         }
     }
-
-
+    //------------------------------------------------------------------------------------------------------------------
 }
