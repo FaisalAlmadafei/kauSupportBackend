@@ -1,6 +1,7 @@
 using System.ComponentModel.DataAnnotations;
 using System.Data.SqlClient;
 using System.Runtime.InteropServices.JavaScript;
+using Azure.Security.KeyVault.Secrets;
 using Dapper;
 using kauSupport.Controllers.FacultyMember;
 using kauSupport.Models;
@@ -16,6 +17,7 @@ public class TechnicalMember_Controller : Controller
 {
     private readonly IConfiguration config;
     private SqlConnection conn;
+    private readonly SecretClient _secretClient;
 
     public TechnicalMember_Controller(IConfiguration config)
     {
@@ -268,9 +270,12 @@ public class TechnicalMember_Controller : Controller
     [Route("SuggestSolution")]
     public async Task<IActionResult> SuggestSolution(string problem)
     {
-        string apiKey = config.GetValue<string>("OpenAI:ApiKey");
+        var myKey = await conn.QueryFirstOrDefaultAsync<string>(
+            "select mykey from  [kauSupport].[dbo].[API]");
+       
+      
 
-        var openAi = new OpenAIAPI(new APIAuthentication(apiKey));
+        var openAi = new OpenAIAPI(new APIAuthentication(myKey));
 
         var conv = openAi.Chat.CreateConversation();
 

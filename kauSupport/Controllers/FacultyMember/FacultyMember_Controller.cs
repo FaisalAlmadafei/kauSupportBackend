@@ -105,7 +105,7 @@ public class FacultyMember_Controller : ControllerBase
             {
                 deviceNumber = Device_Number, serialNumber = Serial_Number, deviceLocatedLab = Device_LocatedLab,
                 reportType = Report_Type, problemDescription = Problem_Description, reportedBy = Reported_By,
-                reportDate = currentDateTime, assignedTaskTo = Supervisor.UserId
+                reportDate = currentDateTime, assignedTaskTo = Supervisor.UserId 
             });
 
         string status = "Reported";
