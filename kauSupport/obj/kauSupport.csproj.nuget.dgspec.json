@@ -39,6 +39,10 @@
         "net7.0": {
           "targetAlias": "net7.0",
           "dependencies": {
+            "BCrypt.Net-Core": {
+              "target": "Package",
+              "version": "[1.6.0, )"
+            },
             "Dapper": {
               "target": "Package",
               "version": "[2.1.28, )"
@@ -50,6 +54,10 @@
             "Newtonsoft.Json": {
               "target": "Package",
               "version": "[13.0.3, )"
+            },
+            "OpenAI": {
+              "target": "Package",
+              "version": "[1.10.0, )"
             },
             "Swashbuckle.AspNetCore": {
               "target": "Package",

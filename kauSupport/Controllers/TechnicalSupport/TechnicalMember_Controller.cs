@@ -6,6 +6,7 @@ using kauSupport.Controllers.FacultyMember;
 using kauSupport.Models;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
+using OpenAI_API;
 
 namespace kauSupport.Controllers.TechnicalSupport;
 
@@ -110,12 +111,12 @@ public class TechnicalMember_Controller : Controller
 
         if (rowsAffected > 0)
         {
-            return Ok(true);
+            return Ok("Device deleted successfully!");
         }
         else
         {
             // No rows affected, device not found
-            return Ok(false);
+            return BadRequest("Device Not found!");
         }
     }
 
@@ -185,8 +186,37 @@ public class TechnicalMember_Controller : Controller
     }
 
     //------------------------------------------------------------------------------------------------------
-    //TODO Update device method ... 
+    [HttpPut]
+    [Route("UpdateDevice")]
+    public async Task<ActionResult> UpdateDevice(string Serial_Number, string Device_Status, string Device_Type,
+        DateTime NextPeriodic_Date, DateTime Arrival_Date, int Device_Number, string Lab_Number)
+    {
+        var conn = new SqlConnection(config.GetConnectionString("DefaultConnection"));
+        var effectedRows =
+            await conn.ExecuteAsync(
+                "UPDATE [kauSupport].[dbo].[Devices] SET serialNumber = @serialNumber, deviceStatus = @deviceStatus," +
+                " type = @type, arrivalDate = @arrivalDate, nextPeriodicDate = @nextPeriodicDate WHERE deviceNumber = @deviceNumber AND " +
+                "deviceLocatedLab = @deviceLocatedLab",
+                new
+                {
+                    serialNumber = Serial_Number,
+                    deviceStatus = Device_Status,
+                    type = Device_Type,
+                    arrivalDate = Arrival_Date,
+                    nextPeriodicDate = NextPeriodic_Date,
+                    deviceNumber = Device_Number,
+                    deviceLocatedLab = Lab_Number
+                });
 
+        if (effectedRows > 0)
+        {
+            return Ok("Device updated successfully!");
+        }
+        else
+        {
+            return BadRequest("Problem in updating the device");
+        }
+    }
 
     // ------------------------------------------------------------------------------------------------------
 
@@ -198,6 +228,11 @@ public class TechnicalMember_Controller : Controller
         var conn = new SqlConnection(config.GetConnectionString("DefaultConnection"));
         DateTime Repair_Date = DateTime.Now.Date;
         string Report_Status = "Resolved";
+        
+        var report=  await conn.QueryFirstAsync<Report>(
+            "SELECT reportType from [kauSupport].[dbo].[Reports] where reportID = @reportID ",
+            new { reportID = Report_Id });
+        
         //Update report data
         await conn.ExecuteAsync(
             "UPDATE  [kauSupport].[dbo].[Reports] set reportStatus = @reportStatus, actionTaken= @actionTaken ,repairDate = @repairDate where reportID = @reportID",
@@ -222,10 +257,167 @@ public class TechnicalMember_Controller : Controller
                 serialNumber = deviceSerialNumber
             });
         HttpContext.Response.Cookies.Delete("ReportedDevice_" + deviceSerialNumber);
+        await conn.ExecuteAsync(
+            "Delete from [kauSupport].[dbo].[Notifications]  WHERE reportID= @reportID AND NotificationType= @NotificationType",
+            new
+            {
+                reportID = Report_Id,
+                NotificationType=report.reportType
+                
+            });
 
         return Ok();
     }
 
 
     // ------------------------------------------------------------------------------------------------------
+    [HttpGet]
+    [Route("SuggestSolution")]
+    public async Task<IActionResult> SuggestSolution(string problem)
+    {
+        // Replace with your actual API key
+        var openAi = new OpenAIAPI(new APIAuthentication(
+            "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"
+        ));
+
+        var conv = openAi.Chat.CreateConversation();
+
+        // Updated system message to guide the chatbot
+        conv.AppendSystemMessage("You are the technical support assistant. Provide direct and clear solutions for PC problems reported by users. Avoid suggesting to contact technical support or seek external help. Focus on actionable steps that can be taken immediately.");
+
+        // Sample user inputs with expected chatbot outputs
+        conv.AppendUserInput("Slow computer performance");
+        conv.AppendExampleChatbotOutput("1-Run a disk cleanup and defragmentation./n" +
+                                        "2- Disable unnecessary startup programs./n");
+
+        conv.AppendUserInput("Printer not responding");
+        conv.AppendExampleChatbotOutput("1- Ensure printer is turned on and connected./n " +
+                                        "2- Check for printer driver updates./n");
+        conv.AppendUserInput("الطابعة ما تشتغل");
+        conv.AppendExampleChatbotOutput("1- Ensure printer is turned on and connected./n " +
+                                        "2- Check for printer driver updates./n");
+
+        conv.AppendUserInput("My computer won't boot or light up");
+        conv.AppendExampleChatbotOutput("Look for signs of power, and ensure the monitor is turned on and connected.");
+        
+        
+
+        // Handling the actual user input
+        conv.AppendUserInput(problem + "Result in English");
+        var response = await conv.GetResponseFromChatbotAsync();
+
+        return Ok(response);
+    }
+    //------------------------------------------------------------------------------------------------------------------
+    [HttpGet]
+    [Route("GetNotifications")]
+    public async Task<ActionResult> getNotifications()
+    {
+        var conn = new SqlConnection(config.GetConnectionString("DefaultConnection"));
+        var response = await conn.QueryAsync<Notification>("select * from  [kauSupport].[dbo].[Notifications]");
+        if (response.Any())
+        {
+            return Ok(response);
+        }
+
+        else
+        {
+            return BadRequest("No Notifications found found...");
+        }
+    }
+    //------------------------------------------------------------------------------------------------------------------
+    [HttpGet]
+    [Route("GetReportsNotificationsByUserId")]
+    public async Task<ActionResult> getReportsNotificationsByUserId(string User_Id)
+    {
+        var conn = new SqlConnection(config.GetConnectionString("DefaultConnection"));
+        var Notification_Type = "issue";
+        var response = await conn.QuerySingleAsync<int>("select COUNT(*) from  [kauSupport].[dbo].[Notifications] where userId= @userId And NotificationType=@NotificationType",
+            new
+            {
+                userId=User_Id,
+                NotificationType= Notification_Type
+            });
+       
+        
+            return Ok(response);
+        
+
+     
+    }
+    
+    //------------------------------------------------------------------------------------------------------------------
+    [HttpGet]
+    [Route("GetPeriodicNotificationsByUserId")]
+    public async Task<ActionResult> getPeriodicNotificationsByUserId(string User_Id)
+    {
+        var conn = new SqlConnection(config.GetConnectionString("DefaultConnection"));
+        var Notification_Type = "Periodic maintenance";
+        var response = await conn.QuerySingleAsync<int>("select COUNT(*) from  [kauSupport].[dbo].[Notifications] where userId= @userId And NotificationType=@NotificationType",
+            new
+            {
+                userId=User_Id,
+                NotificationType= Notification_Type
+            });
+       
+        
+        return Ok(response);
+        
+
+     
+    }
+    //------------------------------------------------------------------------------------------------------------------
+    [HttpGet]
+    [Route("GetRequestsNotificationsByUserId")]
+    public async Task<ActionResult> GetRequestsNotificationsByUserId(string User_Id)
+    {
+        var conn = new SqlConnection(config.GetConnectionString("DefaultConnection"));
+        var Notification_Type = "Service Request";
+        var response = await conn.QuerySingleAsync<int>("select COUNT(*) from  [kauSupport].[dbo].[Notifications] where userId= @userId And NotificationType=@NotificationType",
+            new
+            {
+                userId=User_Id,
+                NotificationType= Notification_Type
+            });
+       
+        
+        return Ok(response);
+        
+
+     
+    }
+    
+    //------------------------------------------------------------------------------------------------------------------
+
+    [HttpPost]
+    [Route("handelRequest")]
+    public async Task<ActionResult> handelRequest([Required] int Request_Id, [Required] string Replay, [Required] string Status)
+    {
+        var conn = new SqlConnection(config.GetConnectionString("DefaultConnection"));
+       
+        var affectedRowa = await conn.ExecuteAsync(
+            "UPDATE  [kauSupport].[dbo].[services] set TechnicalSupportReply = @TechnicalSupportReply, RequestStatus= @RequestStatus  where RequestID = @RequestID",
+            new
+            {
+                TechnicalSupportReply= Replay,
+                RequestStatus= Status,
+                RequestID= Request_Id
+                
+               
+            });
+
+        if (affectedRowa == 1)
+        {
+            await conn.ExecuteAsync(
+                "Delete from [kauSupport].[dbo].[Notifications]  WHERE reportID= @reportID AND NotificationType= @NotificationType",
+                new { reportID = Request_Id , NotificationType="Service Request"});
+            return Ok("Request handeled");
+        }
+        else
+        {
+            return BadRequest("Could not handel request");
+        }
+      
+        
+    }
 }

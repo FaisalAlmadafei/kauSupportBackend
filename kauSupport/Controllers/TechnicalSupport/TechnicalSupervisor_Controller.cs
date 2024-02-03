@@ -38,9 +38,22 @@ public class TechnicalSupervisor_Controller : Controller
                 reportID = Report_Id,
                 reportStatus = status
             });
+        
+        
         if (affectedRows > 0)
         {
+            await conn.ExecuteAsync(
+                "UPDATE [kauSupport].[dbo].[Notifications] set userId= @userId WHERE reportID= @reportID",
+                new
+                {
+                   
+                    reportID = Report_Id,
+                    userId = User_Id
+                   
+                });
+            
             return Ok();
+            
         }
         else
         {
@@ -59,8 +72,11 @@ public class TechnicalSupervisor_Controller : Controller
         Console.WriteLine(currentDateTime);
         //First we will store all devices with perodic data is today ...
         var devices = await conn.QueryAsync<Device>(
-            "select * from  [kauSupport].[dbo].[Devices] where nextPeriodicDate= @nextPeriodicDate",
+            "select * from  [kauSupport].[dbo].[Devices] where nextPeriodicDate<= @nextPeriodicDate",
             new { nextPeriodicDate = currentDateTime });
+        //we will get supervisorID
+        var supervisorID = await conn.QueryFirstOrDefaultAsync<User>("select UserId from  [kauSupport].[dbo].[Users] WHERE role = @role" , 
+            new {role = "Supervisor"});
 
         // Now we will loop each device and create a new report
         foreach (var device in devices)
@@ -71,6 +87,7 @@ public class TechnicalSupervisor_Controller : Controller
             string Report_Type = "Periodic maintenance";
             string Problem_Description = "The device needs a Periodic maintenance";
             string Reported_By = "System";
+            string Assigned_To = supervisorID.UserId;
 
             // here we update the nextPeriodicDate
             await conn.ExecuteAsync(
@@ -82,8 +99,9 @@ public class TechnicalSupervisor_Controller : Controller
                 new { serialNumber = Serial_Number, deviceStatus = status });
 
             // we add a new report to reports table..
-            await conn.ExecuteAsync(
-                "INSERT INTO  [kauSupport].[dbo].[Reports] ( deviceNumber, serialNumber,deviceLocatedLab, reportType , problemDescription, reportedBy , reportDate) values ( @deviceNumber, @serialNumber, @deviceLocatedLab, @reportType , @problemDescription, @reportedBy ,@reportDate ) ",
+            var Report_ID= await conn.QuerySingleAsync<int>(
+                "INSERT INTO  [kauSupport].[dbo].[Reports] ( deviceNumber, serialNumber,deviceLocatedLab, reportType , problemDescription, reportedBy , reportDate, assignedTaskTo) values " +
+                "( @deviceNumber, @serialNumber, @deviceLocatedLab, @reportType , @problemDescription, @reportedBy ,@reportDate, @assignedTaskTo );  SELECT CAST(SCOPE_IDENTITY() as int); ",
                 new
                 {
                     deviceNumber = Device_Number,
@@ -92,7 +110,18 @@ public class TechnicalSupervisor_Controller : Controller
                     reportType = Report_Type,
                     problemDescription = Problem_Description,
                     reportedBy = Reported_By,
-                    reportDate = currentDateTime
+                    reportDate = currentDateTime,
+                    assignedTaskTo=Assigned_To 
+                });
+            
+          
+            await conn.ExecuteAsync(
+                "INSERT INTO  [kauSupport].[dbo].[Notifications] ( reportId, userId, NotificationType) values (@reportId, @userId, @NotificationType ) ",
+                new
+                {
+                    reportId = Report_ID, 
+                    userId = supervisorID.UserId, // Supervisor ID by defualt
+                    NotificationType = Report_Type
                 });
         }
 
@@ -125,4 +154,66 @@ public class TechnicalSupervisor_Controller : Controller
             });
         return Ok(response);
     }
-}
+    //------------------------------------------------------------------------------------------------------------------
+    [HttpPost]
+    [Route("AssignRequest")]
+    public async Task<ActionResult> AssignRequest(string User_Id, int Request_Id)
+    {
+        using var conn = new SqlConnection(config.GetConnectionString("DefaultConnection"));
+        var affectedRows = await conn.ExecuteAsync(
+            "UPDATE [kauSupport].[dbo].[Services] set AssignedTo= @AssignedTo WHERE RequestID= @RequestID",
+            new
+            {
+                AssignedTo = User_Id,
+                RequestID = Request_Id
+              
+            });
+        
+        
+        if (affectedRows > 0)
+        {
+            await conn.ExecuteAsync(
+                "UPDATE [kauSupport].[dbo].[Notifications] set userId= @userId WHERE reportID= @reportID AND NotificationType=@NotificationType",
+                new
+                {
+                   
+                    reportID = Request_Id,
+                    userId = User_Id,
+                    NotificationType="Service Request"
+                   
+                });
+            
+            return Ok();
+            
+        }
+        else
+        {
+            return BadRequest("No rows affected");
+        }
+    }
+    //------------------------------------------------------------------------------------------------------------------
+    [HttpGet]
+    [Route("GetNewRequestByUserId")]
+    public async Task<ActionResult> GetNewRequestByUserId(string User_Id)
+    {
+        using var conn = new SqlConnection(config.GetConnectionString("DefaultConnection"));
+
+        var response = await conn.QueryAsync<Service>(
+            "select * from  [kauSupport].[dbo].[Services] where AssignedTo= @AssignedTo AND RequestStatus=@RequestStatus", 
+            new
+            {
+                AssignedTo = User_Id,
+                RequestStatus="Pending"
+                
+            });
+        if (response.Any())
+        {
+            return Ok(response);
+        }
+
+        else
+        {
+            return BadRequest("No requests fond...");
+        }
+    }
+    }
