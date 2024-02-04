@@ -1,10 +1,12 @@
+using System.ComponentModel.DataAnnotations;
 using System.Data.SqlClient;
 using Dapper;
 using kauSupport.Models;
 using Microsoft.AspNetCore.Mvc;
 
 namespace kauSupport.Controllers.TechnicalSupport;
-
+[Route("api/[controller]")]
+[ApiController]
 public class TechnicalSupervisor_Controller : Controller
 {
     private readonly IConfiguration config;
@@ -36,9 +38,9 @@ public class TechnicalSupervisor_Controller : Controller
     }
 
     //----------------------------------------------Assign report to a technical member---------------------------------
-    [HttpPost]
-    [Route("AssignTask")]
-    public async Task<ActionResult> AssignTask(string User_Id, int Report_Id)
+    [HttpPut]
+    [Route("AssignReport")]
+    public async Task<ActionResult> AssignReport([Required] string User_Id, [Required] int Report_Id)
     {
         string status = "in process";
         var affectedRows = await conn.ExecuteAsync(
@@ -61,11 +63,11 @@ public class TechnicalSupervisor_Controller : Controller
                     userId = User_Id
                 });
 
-            return Ok();
+            return Ok("Report assigned successfully ");
         }
         else
         {
-            return BadRequest("Could not assign task...");
+            return BadRequest("Could not assign Report...");
         }
     }
     
@@ -174,12 +176,12 @@ public class TechnicalSupervisor_Controller : Controller
     [Route("MonitorReports")]
     public async Task<ActionResult> MonitorReports()
     {
-        string Report_Status = "in process";
+      
         var response = await conn.QueryAsync<Report>(
-            "select * from  [kauSupport].[dbo].[Reports] where reportStatus= @reportStatus",
+            "select * from  [kauSupport].[dbo].[Reports] where checkedBySupervisor= @checkedBySupervisor",
             new
             {
-                reportStatus = Report_Status
+                checkedBySupervisor = "No"
             });
         if (response.Any())
         {
@@ -191,6 +193,30 @@ public class TechnicalSupervisor_Controller : Controller
         }
         
     }
+    //------------------------------------Check report by supervisor------------------------------------
+
+    [HttpPut]
+    [Route("CheckReport")]
+    public async Task<ActionResult> CheckReport([Required]int Report_ID)
+    {
+        var affectedRows = await conn.ExecuteAsync(
+            "UPDATE [kauSupport].[dbo].[Reports] set checkedBySupervisor= @checkedBySupervisor where reportID= @reportID",
+            new
+            {
+                checkedBySupervisor = "Yes",
+                reportID= Report_ID
+            });
+        if (affectedRows > 0)
+        {
+            return Ok("Report checked ");
+        }
+        else
+        {
+            return BadRequest("Could not check the report.");
+        }
+        
+    }
+
 
     //------------------------------------Assign services request to supervisor team------------------------------------
     [HttpPost]
