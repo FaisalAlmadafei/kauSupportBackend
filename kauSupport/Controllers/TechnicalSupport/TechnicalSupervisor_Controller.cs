@@ -1,13 +1,17 @@
 using System.ComponentModel.DataAnnotations;
 using System.Data.SqlClient;
 using Dapper;
+using kauSupport.Controllers.UserVerification;
 using kauSupport.Models;
+using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 
 namespace kauSupport.Controllers.TechnicalSupport;
+
 [Route("api/[controller]")]
 [ApiController]
 public class TechnicalSupervisor_Controller : Controller
+
 {
     private readonly IConfiguration config;
     private SqlConnection conn;
@@ -17,9 +21,8 @@ public class TechnicalSupervisor_Controller : Controller
     {
         this.config = config;
         conn = conn = new SqlConnection(config.GetConnectionString("DefaultConnection"));
-
-        
     }
+
     //-----------------------------------------------Get all reports----------------------------------------------------
     [HttpGet]
     [Route("GetReports")]
@@ -34,7 +37,6 @@ public class TechnicalSupervisor_Controller : Controller
         {
             return BadRequest("No reports found...");
         }
-       
     }
 
     //----------------------------------------------Assign report to a technical member---------------------------------
@@ -42,35 +44,57 @@ public class TechnicalSupervisor_Controller : Controller
     [Route("AssignReport")]
     public async Task<ActionResult> AssignReport([Required] string User_Id, [Required] int Report_Id)
     {
-        string status = "in process";
-        var affectedRows = await conn.ExecuteAsync(
-            "UPDATE [kauSupport].[dbo].[Reports] set assignedTaskTo= @assignedTaskTo, reportStatus= @reportStatus WHERE reportID= @reportID",
-            new
-            {
-                assignedTaskTo = User_Id,
-                reportID = Report_Id,
-                reportStatus = status
-            });
-
-
-        if (affectedRows > 0)
+        try
         {
-            await conn.ExecuteAsync(
-                "UPDATE [kauSupport].[dbo].[Notifications] set userId= @userId WHERE reportID= @reportID",
+            string status = "in process";
+
+            var technicalMember = await conn.QueryFirstOrDefaultAsync<User>(
+                "SELECT * FROM [kauSupport].[dbo].[Users] WHERE userId = @userId",
+                new { userId = User_Id });
+
+            if (technicalMember == null)
+            {
+                return BadRequest("User not found.");
+            }
+
+            var affectedRows = await conn.ExecuteAsync(
+                @"UPDATE [kauSupport].[dbo].[Reports] 
+              SET assignedTaskTo = @assignedTaskTo, 
+                  reportStatus = @reportStatus, 
+                  assignedToFirstName = @assignedToFirstName, 
+                  assignedToLastName = @assignedToLastName 
+              WHERE reportID = @reportID",
                 new
                 {
+                    assignedTaskTo = User_Id,
                     reportID = Report_Id,
-                    userId = User_Id
+                    reportStatus = status,
+                    assignedToFirstName = technicalMember.firstName,
+                    assignedToLastName = technicalMember.lastName
                 });
 
-            return Ok("Report assigned successfully ");
+            if (affectedRows > 0)
+            {
+                await conn.ExecuteAsync(
+                    "UPDATE [kauSupport].[dbo].[Notifications] SET userId = @userId WHERE reportID = @reportID",
+                    new { reportID = Report_Id, userId = User_Id });
+
+                return Ok("Report assigned successfully.");
+            }
+            else
+            {
+                return BadRequest("Could not assign Report.");
+            }
         }
-        else
+        catch (Exception ex)
         {
-            return BadRequest("Could not assign Report...");
+            // Log the exception
+            Console.WriteLine($"An error occurred: {ex.Message}");
+            return StatusCode(500, "Internal server error.");
         }
     }
-    
+
+
     //--------This method will return all new report and will check the database if a device needs periodic maintenance-
     [HttpGet]
     [Route("GetNewReportsForSupervisor")]
@@ -83,9 +107,9 @@ public class TechnicalSupervisor_Controller : Controller
         var devices = await conn.QueryAsync<Device>(
             "select * from  [kauSupport].[dbo].[Devices] where nextPeriodicDate<= @nextPeriodicDate",
             new { nextPeriodicDate = currentDateTime });
-        //we will get supervisorID
-        var supervisorID = await conn.QueryFirstOrDefaultAsync<User>(
-            "select UserId from  [kauSupport].[dbo].[Users] WHERE role = @role",
+        //we will get supervisor 
+        var supervisor = await conn.QueryFirstOrDefaultAsync<User>(
+            "select * from  [kauSupport].[dbo].[Users] WHERE role = @role",
             new { role = "Supervisor" });
 
         // Now we will loop each device and create a new report
@@ -97,12 +121,17 @@ public class TechnicalSupervisor_Controller : Controller
             string Report_Type = "Periodic maintenance";
             string Problem_Description = "The device needs a Periodic maintenance";
             string Reported_By = "System";
-            string Assigned_To = supervisorID.UserId;
+            string Assigned_To = supervisor.UserId;
+            string problem_Type = "Periodic maintenance";
+            string reportedBy_FirstName = "KauSupport";
+            string reportedBy_LastName = "System";
+            string assignedTo_FirstName = supervisor.firstName;
+            string assignedTo_LastName = supervisor.lastName;
 
             // here we update the nextPeriodicDate
             await conn.ExecuteAsync(
-                "UPDATE [kauSupport].[dbo].[Devices] SET nextPeriodicDate = @nextPeriodicDate WHERE deviceNumber = @deviceNumber",
-                new { nextPeriodicDate = newPeriodicMaintenanceDate, deviceNumber = Device_Number });
+                "UPDATE [kauSupport].[dbo].[Devices] SET nextPeriodicDate = @nextPeriodicDate WHERE serialNumber = @serialNumber",
+                new { nextPeriodicDate = newPeriodicMaintenanceDate, serialNumber = Serial_Number });
             string status = "Reported";
             await conn.ExecuteAsync(
                 "UPDATE [kauSupport].[dbo].[Devices] SET deviceStatus = @deviceStatus WHERE serialNumber = @serialNumber; ",
@@ -110,8 +139,8 @@ public class TechnicalSupervisor_Controller : Controller
 
             // we add a new report to reports table..
             var Report_ID = await conn.QuerySingleAsync<int>(
-                "INSERT INTO  [kauSupport].[dbo].[Reports] ( deviceNumber, serialNumber,deviceLocatedLab, reportType , problemDescription, reportedBy , reportDate, assignedTaskTo) values " +
-                "( @deviceNumber, @serialNumber, @deviceLocatedLab, @reportType , @problemDescription, @reportedBy ,@reportDate, @assignedTaskTo );  SELECT CAST(SCOPE_IDENTITY() as int); ",
+                "INSERT INTO  [kauSupport].[dbo].[Reports] ( deviceNumber, serialNumber,deviceLocatedLab, reportType , problemDescription, reportedBy , reportDate, assignedTaskTo ,  problemType , reportedByFirstName ,reportedByLastName ,assignedToFirstName ,assignedToLastName) values " +
+                "( @deviceNumber, @serialNumber, @deviceLocatedLab, @reportType , @problemDescription, @reportedBy ,@reportDate, @assignedTaskTo, @problemType,@reportedByFirstName ,@reportedByLastName ,@assignedToFirstName ,@assignedToLastName );  SELECT CAST(SCOPE_IDENTITY() as int); ",
                 new
                 {
                     deviceNumber = Device_Number,
@@ -121,7 +150,12 @@ public class TechnicalSupervisor_Controller : Controller
                     problemDescription = Problem_Description,
                     reportedBy = Reported_By,
                     reportDate = currentDateTime,
-                    assignedTaskTo = Assigned_To
+                    assignedTaskTo = Assigned_To,
+                    problemType = problem_Type,
+                    reportedByFirstName = reportedBy_FirstName,
+                    reportedByLastName = reportedBy_LastName,
+                    assignedToFirstName = assignedTo_FirstName,
+                    assignedToLastName = assignedTo_LastName
                 });
 
 
@@ -130,7 +164,7 @@ public class TechnicalSupervisor_Controller : Controller
                 new
                 {
                     reportId = Report_ID,
-                    userId = supervisorID.UserId, // Supervisor ID by defualt
+                    userId = supervisor.UserId, // Supervisor ID by defualt
                     NotificationType = Report_Type
                 });
         }
@@ -145,9 +179,10 @@ public class TechnicalSupervisor_Controller : Controller
         }
         else
         {
-            return NotFound("Reports not found ...");
+            return BadRequest("Reports not found ...");
         }
     }
+
     //---------------------------------Get new request for a technical member by UserID---------------------------------
     [HttpGet]
     [Route("GetNewRequestByUserId")]
@@ -170,13 +205,12 @@ public class TechnicalSupervisor_Controller : Controller
             return BadRequest("No requests fond...");
         }
     }
-    
+
     //-------------------------------Supervisor can see the status of reports assigned to his team----------------------
     [HttpGet]
     [Route("MonitorReports")]
     public async Task<ActionResult> MonitorReports()
     {
-      
         var response = await conn.QueryAsync<Report>(
             "select * from  [kauSupport].[dbo].[Reports] where checkedBySupervisor= @checkedBySupervisor",
             new
@@ -191,20 +225,19 @@ public class TechnicalSupervisor_Controller : Controller
         {
             return BadRequest("No Reports found ..");
         }
-        
     }
     //------------------------------------Check report by supervisor------------------------------------
 
     [HttpPut]
     [Route("CheckReport")]
-    public async Task<ActionResult> CheckReport([Required]int Report_ID)
+    public async Task<ActionResult> CheckReport([Required] int Report_ID)
     {
         var affectedRows = await conn.ExecuteAsync(
             "UPDATE [kauSupport].[dbo].[Reports] set checkedBySupervisor= @checkedBySupervisor where reportID= @reportID",
             new
             {
                 checkedBySupervisor = "Yes",
-                reportID= Report_ID
+                reportID = Report_ID
             });
         if (affectedRows > 0)
         {
@@ -214,21 +247,31 @@ public class TechnicalSupervisor_Controller : Controller
         {
             return BadRequest("Could not check the report.");
         }
-        
     }
 
 
     //------------------------------------Assign services request to supervisor team------------------------------------
-    [HttpPost]
+    [HttpPut]
     [Route("AssignRequest")]
     public async Task<ActionResult> AssignRequest(string User_Id, int Request_Id)
     {
+        var technicalMember = await conn.QueryFirstOrDefaultAsync<User>(
+            "SELECT * FROM [kauSupport].[dbo].[Users] WHERE userId = @userId",
+            new { userId = User_Id });
+
+        if (technicalMember == null)
+        {
+            return BadRequest("User not found.");
+        }
+
         var affectedRows = await conn.ExecuteAsync(
-            "UPDATE [kauSupport].[dbo].[Services] set AssignedTo= @AssignedTo WHERE RequestID= @RequestID",
+            "UPDATE [kauSupport].[dbo].[Services] set AssignedTo= @AssignedTo , assignedToFirstName=@assignedToFirstName ,assignedToLastName=@assignedToLastName  WHERE RequestID= @RequestID",
             new
             {
                 AssignedTo = User_Id,
-                RequestID = Request_Id
+                RequestID = Request_Id,
+                assignedToFirstName = technicalMember.firstName,
+                assignedToLastName = technicalMember.lastName
             });
 
 
@@ -251,5 +294,114 @@ public class TechnicalSupervisor_Controller : Controller
         }
     }
 
- 
+    //-----------------------------------------------------------------------------------------------------------------
+    [HttpGet]
+    [Route("GetDevices")]
+    public async Task<ActionResult> getDevices()
+    {
+        var response =
+            await conn.QueryAsync<Device>("select * from  [kauSupport].[dbo].[Devices] ORDER BY deviceNumber");
+        if (response.Any())
+        {
+            return Ok(response);
+        }
+
+        else
+        {
+            return BadRequest("No devices found...");
+        }
+    }
+
+    //-----------------------------------------------------------------------------------------------------------------
+    [HttpGet]
+    [Route("GetTeamProgress")]
+    public async Task<ActionResult> GetTeamProgress()
+    {
+        var TeamProgress = new List<TeamMembersProgress>();
+
+        var Team = await conn.QueryAsync<User>(
+            "select UserId, firstName, lastName, role,email  from   [kauSupport].[dbo].[Users] WHERE role= @role",
+            new
+            {
+                role = "Technical Member"
+            });
+
+
+        foreach (var member in Team)
+
+        {
+            var notificationTypes = new[] { "issue", "Periodic maintenance" };
+            var ReportsAssignedCount = await conn.QuerySingleAsync<int>(
+                "select COUNT(*) from  [kauSupport].[dbo].[Notifications] where userId= @userId And NotificationType IN @NotificationType",
+                new
+                {
+                    userId = member.UserId,
+                    NotificationType = notificationTypes
+                });
+
+            TeamProgress.Add(new TeamMembersProgress
+            {
+                firstName = member.firstName,
+                lastName = member.lastName,
+                numberOfReports = ReportsAssignedCount
+            });
+        }
+
+        if (TeamProgress.Any())
+
+        {
+            return Ok(TeamProgress);
+        }
+
+        else
+        {
+            return BadRequest("Could not gather data");
+        }
+    }
+
+    //-----------------------------------------------------------------------------------------------------------------
+
+
+    [HttpGet]
+    [Route("GetReportStatistics")]
+    public async Task<ActionResult> GetReportStatistics()
+    {
+        // Query to get the total number of reports
+        var reportsTotalCount = await conn.QuerySingleAsync<int>(
+            "SELECT COUNT(*) FROM [kauSupport].[dbo].[Reports] ");
+        if (reportsTotalCount <= 0)
+        {
+            return BadRequest("No Reports Found...");
+        }
+
+        // Query to get the count for each problem type of report
+        var reportsWithTypeCounts = await conn.QueryAsync<ReportSummary>(
+            "SELECT problemType, COUNT(*) AS Count FROM [kauSupport].[dbo].[Reports] GROUP BY problemType");
+
+
+        var reportsSummaryList = new List<ReportSummary>();
+
+        foreach (var report in reportsWithTypeCounts)
+        {
+            reportsSummaryList.Add(
+                new ReportSummary
+                {
+                    problemType = report.problemType,
+                    Count = report.Count,
+                    Percentage =
+                        ((double)report.Count / reportsTotalCount) *
+                        100 // Make sure totalCount is not 0 to avoid division by zero
+                }
+            );
+        }
+
+        // Construct the final DTO
+        var result = new TotalReportSummary
+        {
+            ReportsTotalCount = reportsTotalCount,
+            Details = reportsSummaryList
+        };
+
+        return Ok(result);
+    }
 }

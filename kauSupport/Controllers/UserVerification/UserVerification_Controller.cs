@@ -34,7 +34,10 @@ public class UserVerification_Controller : Controller
         // Check if user exists and then verify the password
         if (userPass != null && BCrypt.Net.BCrypt.Verify(Password, userPass))
         {
-            return Ok("Login successful");
+            var user = await conn.QueryFirstOrDefaultAsync<User>(
+                "select UserId, firstName, lastName, role,email from  [kauSupport].[dbo].[Users] WHERE UserId = @UserId",
+                new { UserId = User_Id });       
+            return Ok(user);
         }
         else
         {
@@ -43,7 +46,7 @@ public class UserVerification_Controller : Controller
     }
     //------------------------------------------------------------------------------------------------------------------
 
-    [HttpPost]
+    [HttpPut]
     [Route("AddPass")]
     public async Task<IActionResult> AddPass(string User_Id, string Password)
     {

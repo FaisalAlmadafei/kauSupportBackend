@@ -17,7 +17,7 @@ public class TechnicalMember_Controller : Controller
 {
     private readonly IConfiguration config;
     private SqlConnection conn;
-    private readonly SecretClient _secretClient;
+
 
     public TechnicalMember_Controller(IConfiguration config)
     {
@@ -33,7 +33,7 @@ public class TechnicalMember_Controller : Controller
         string Report_Type = "issue";
         string Report_Status = "in process";
         var response = await conn.QueryAsync<Report>(
-            "select * from  [kauSupport].[dbo].[Reports] where assignedTaskTo= @assignedTaskTo AND reportType = @reportType AND reportStatus = @reportStatus",
+            "select * from  [kauSupport].[dbo].[Reports] where assignedTaskTo= @assignedTaskTo  AND reportStatus = @reportStatus",
             new { assignedTaskTo = User_Id, reportType = Report_Type, reportStatus = Report_Status });
 
         if (response.Any())
@@ -48,7 +48,7 @@ public class TechnicalMember_Controller : Controller
     }
 
     //----------------------------------Get the Periodic Maintenance Reports by memberID--------------------------------
-    [HttpGet]
+  /*  [HttpGet]
     [Route("GetPeriodicMaintenanceReportsByMemberID")]
     public async Task<ActionResult> GetPeriodicMaintenanceReportsByMemberID([Required] string User_Id)
     {
@@ -66,7 +66,7 @@ public class TechnicalMember_Controller : Controller
             return BadRequest("Reports not found ...");
         }
     }
-
+*/
 
     //-----------------------------------------Get the device with all reports on it------------------------------------
     [HttpGet]
@@ -173,7 +173,7 @@ public class TechnicalMember_Controller : Controller
         }
         else
         {
-            return BadRequest("No enough capacity for the new device");
+            return Conflict("No enough capacity for the new device");
         }
     }
 
@@ -210,7 +210,7 @@ public class TechnicalMember_Controller : Controller
     }
 
     // ----------------------------------------Handel report and fix problem-------------------------------------------
-    [HttpPost]
+    [HttpPut]
     [Route("handelReport")]
     public async Task<ActionResult> handelReport([Required] int Report_Id, [Required] string Action_Taken)
     {
@@ -272,8 +272,7 @@ public class TechnicalMember_Controller : Controller
     {
         var myKey = await conn.QueryFirstOrDefaultAsync<string>(
             "select mykey from  [kauSupport].[dbo].[API]");
-       
-      
+
 
         var openAi = new OpenAIAPI(new APIAuthentication(myKey));
 
@@ -328,13 +327,13 @@ public class TechnicalMember_Controller : Controller
     [Route("GetReportsNotificationsByUserId")]
     public async Task<ActionResult> getReportsNotificationsByUserId(string User_Id)
     {
-        var Notification_Type = "issue"; // To retrieve only reports Notifications...
+        var notificationTypes = new[] { "issue", "Periodic maintenance" }; 
         var response = await conn.QuerySingleAsync<int>(
-            "select COUNT(*) from  [kauSupport].[dbo].[Notifications] where userId= @userId And NotificationType=@NotificationType",
+            "select COUNT(*) from  [kauSupport].[dbo].[Notifications] where userId= @userId And NotificationType IN @NotificationType",
             new
             {
                 userId = User_Id,
-                NotificationType = Notification_Type
+                NotificationType = notificationTypes
             });
 
 
@@ -342,7 +341,7 @@ public class TechnicalMember_Controller : Controller
     }
 
     //--------------------------Get periodic maintenance Notifications for a technical support member-------------------
-    [HttpGet]
+   /* [HttpGet]
     [Route("GetPeriodicNotificationsByUserId")]
     public async Task<ActionResult> getPeriodicNotificationsByUserId(string User_Id)
     {
@@ -357,7 +356,7 @@ public class TechnicalMember_Controller : Controller
 
 
         return Ok(response);
-    }
+    }*/
 
     //--------------------------Get service requests Notifications for a technical support member-----------------------
     [HttpGet]
@@ -378,7 +377,7 @@ public class TechnicalMember_Controller : Controller
     }
 
     //-----------------------------------------Handle requests----------------------------------------------------------
-    [HttpPost]
+    [HttpPut]
     [Route("handelRequest")]
     public async Task<ActionResult> handelRequest([Required] int Request_Id, [Required] string Replay,
         [Required] string Status)

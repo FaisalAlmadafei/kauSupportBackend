@@ -14,4 +14,10 @@ public class Report
     public DateTime repairDate { get; set; }
     public string actionTaken { get; set; }
     public string assignedTaskTo { get; set; }
+    public string problemType { get; set; }
+    public string  reportedByFirstName { get; set; }
+    public string reportedByLastName { get; set; }
+    public string   assignedToFirstName { get; set; }
+    public string  assignedToLastName { get; set; }
+
 }

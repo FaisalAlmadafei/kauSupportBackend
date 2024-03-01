@@ -39,22 +39,7 @@ public class FacultyMember_Controller : ControllerBase
     //------------------------------------------------------------------------------------------------------------------
 
     //--------------------------------Get all Devices-------------------------------------------------------------------
-    [HttpGet]
-    [Route("GetDevices")]
-    public async Task<ActionResult> getDevices()
-    {
-        var response =
-            await conn.QueryAsync<Device>("select * from  [kauSupport].[dbo].[Devices] ORDER BY deviceNumber");
-        if (response.Any())
-        {
-            return Ok(response);
-        }
-
-        else
-        {
-            return BadRequest("No devices found...");
-        }
-    }
+    
     //------------------------------------------------------------------------------------------------------------------
 
     //--------------------------------Get all Devices in a specific Lab-------------------------------------------------
@@ -82,30 +67,37 @@ public class FacultyMember_Controller : ControllerBase
     [Route("AddReport")]
     public async Task<ActionResult> addReport([Required] String Device_Number, [Required] String Serial_Number,
         [Required] String Device_LocatedLab,
-        [Required] String Problem_Description, [Required] String Reported_By)
+        [Required] String Problem_Description, [Required] String Reported_By , [Required] String Problem_Type)
     {
         DateTime currentDateTime = DateTime.Now.Date;
         string Report_Type = "issue";
 
         if (!IsDeviceReportable(Serial_Number))
         {
-            return Conflict("This device is reported, try again within 3 days.");
+            return BadRequest("This device is reported, try again within 3 days.");
         }
 
         // we will get the Admin or supervisor to use their ID
         var Supervisor = await conn.QueryFirstOrDefaultAsync<User>(
-            "select UserId from  [kauSupport].[dbo].[Users] WHERE role = @role",
+            "select * from  [kauSupport].[dbo].[Users] WHERE role = @role",
             new { role = "Supervisor" });
+        // we will get the user first and last name
+        var FacultyMember = await conn.QueryFirstOrDefaultAsync<User>(
+            "select * from  [kauSupport].[dbo].[Users] WHERE userId = @userId",
+            new { userId = Reported_By });
+
+        
 
         // we will add new report and get the report ID
         var Report_ID = await conn.QuerySingleAsync<int>(
-            "INSERT INTO  [kauSupport].[dbo].[Reports] ( deviceNumber, serialNumber,deviceLocatedLab, reportType , problemDescription, reportedBy , reportDate, assignedTaskTo) values" +
-            " ( @deviceNumber, @serialNumber, @deviceLocatedLab, @reportType , @problemDescription, @reportedBy ,@reportDate, @assignedTaskTo );  SELECT CAST(SCOPE_IDENTITY() as int); ",
+            "INSERT INTO  [kauSupport].[dbo].[Reports] ( deviceNumber, serialNumber,deviceLocatedLab, reportType , problemDescription, reportedBy , reportDate, assignedTaskTo , problemType ,   assignedToFirstName , assignedToLastName ,  reportedByFirstName  , reportedByLastName ) values" +
+            " ( @deviceNumber, @serialNumber, @deviceLocatedLab, @reportType , @problemDescription, @reportedBy ,@reportDate, @assignedTaskTo , @problemType ,  @assignedToFirstName , @assignedToLastName ,  @reportedByFirstName  , @reportedByLastName);  SELECT CAST(SCOPE_IDENTITY() as int); ",
             new
             {
                 deviceNumber = Device_Number, serialNumber = Serial_Number, deviceLocatedLab = Device_LocatedLab,
                 reportType = Report_Type, problemDescription = Problem_Description, reportedBy = Reported_By,
-                reportDate = currentDateTime, assignedTaskTo = Supervisor.UserId 
+                reportDate = currentDateTime, assignedTaskTo = Supervisor.UserId  , problemType = Problem_Type , assignedToFirstName= Supervisor.firstName , assignedToLastName= Supervisor.lastName , reportedByFirstName= FacultyMember.firstName , reportedByLastName= FacultyMember.lastName
+                
             });
 
         string status = "Reported";
@@ -156,7 +148,7 @@ public class FacultyMember_Controller : ControllerBase
     public async Task<ActionResult> getMyReports([Required] string User_Id)
     {
         var response = await conn.QueryAsync<Report>(
-            "select * from  [kauSupport].[dbo].[Reports] where reportedBy= @reportedBy", new { reportedBy = User_Id });
+            "select * from  [kauSupport].[dbo].[Reports] where reportedBy= @reportedBy ORDER BY reportID DESC", new { reportedBy = User_Id });
         if (response.Any())
         {
             return Ok(response);
@@ -219,16 +211,27 @@ public class FacultyMember_Controller : ControllerBase
     public async Task<ActionResult> RequestService([Required] string Request_, [Required] string Requested_By)
     {
         var supervisor = await conn.QueryFirstOrDefaultAsync<User>(
-            "select UserId from  [kauSupport].[dbo].[Users] WHERE role = @role",
+            "select * from  [kauSupport].[dbo].[Users] WHERE role = @role",
             new { role = "Supervisor" });
+        
+        var FacultyMember = await conn.QueryFirstOrDefaultAsync<User>(
+            "select * from  [kauSupport].[dbo].[Users] WHERE userId = @userId",
+            new { userId = Requested_By });
+
 
         var Request_Id = await conn.QuerySingleAsync<int>(
-            "INSERT INTO [kauSupport].[dbo].[services] (Request, RequestedBy, AssignedTo) VALUES (@Request , @RequestedBy, @AssignedTo); SELECT CAST(SCOPE_IDENTITY() as int)",
+            "INSERT INTO [kauSupport].[dbo].[services] (Request, RequestedBy, AssignedTo ,assignedToFirstName , assignedToLastName ,  requestedByFirstName  , requestedByLastName) VALUES (@Request , @RequestedBy, @AssignedTo, @assignedToFirstName , @assignedToLastName ,  @requestedByFirstName  , @requestedByLastName); SELECT CAST(SCOPE_IDENTITY() as int)",
             new
             {
                 Request = Request_,
                 RequestedBy = Requested_By,
-                AssignedTo = supervisor.UserId
+                AssignedTo = supervisor.UserId,
+                assignedToFirstName= supervisor.firstName , 
+                assignedToLastName= supervisor.lastName , 
+                requestedByFirstName= FacultyMember.firstName , 
+                requestedByLastName = FacultyMember.lastName
+                
+                
             });
 
         if (Request_Id > 0)
