@@ -51,9 +51,21 @@
               "target": "Package",
               "version": "[2.1.28, )"
             },
+            "Microsoft.AspNetCore.Mvc.Testing": {
+              "target": "Package",
+              "version": "[7.0.16, )"
+            },
             "Microsoft.AspNetCore.OpenApi": {
               "target": "Package",
               "version": "[7.0.15, )"
+            },
+            "Moq": {
+              "target": "Package",
+              "version": "[4.20.70, )"
+            },
+            "Moq.Dapper": {
+              "target": "Package",
+              "version": "[1.0.7, )"
             },
             "Newtonsoft.Json": {
               "target": "Package",

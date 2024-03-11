@@ -3,6 +3,7 @@ using System.Data.SqlClient;
 using System.Runtime.InteropServices.JavaScript;
 using Azure.Security.KeyVault.Secrets;
 using Dapper;
+using kauSupport.Connection;
 using kauSupport.Controllers.FacultyMember;
 using kauSupport.Models;
 using Microsoft.AspNetCore.Http.HttpResults;
@@ -15,14 +16,12 @@ namespace kauSupport.Controllers.TechnicalSupport;
 [ApiController]
 public class TechnicalMember_Controller : Controller
 {
-    private readonly IConfiguration config;
-    private SqlConnection conn;
+    private readonly IDbConnectionFactory _dbConnectionFactory;
 
 
-    public TechnicalMember_Controller(IConfiguration config)
+    public TechnicalMember_Controller(IDbConnectionFactory dbConnectionFactory)
     {
-        this.config = config;
-        conn = conn = new SqlConnection(config.GetConnectionString("DefaultConnection"));
+        _dbConnectionFactory = dbConnectionFactory; // Instance of SqlConnectionFactory came form dependency injection 
     }
 
     //------------------------------------Get reports by memberID-------------------------------------------------------
@@ -30,11 +29,11 @@ public class TechnicalMember_Controller : Controller
     [Route("GetReportsByTechnicalMemberID")]
     public async Task<ActionResult> GetReportsByTechnicalMemberID([Required] string User_Id)
     {
-        string Report_Type = "issue";
+        var conn = _dbConnectionFactory.CreateConnection();
         string Report_Status = "in process";
         var response = await conn.QueryAsync<Report>(
             "select * from  [kauSupport].[dbo].[Reports] where assignedTaskTo= @assignedTaskTo  AND reportStatus = @reportStatus",
-            new { assignedTaskTo = User_Id, reportType = Report_Type, reportStatus = Report_Status });
+            new { assignedTaskTo = User_Id, reportStatus = Report_Status });
 
         if (response.Any())
         {
@@ -47,32 +46,13 @@ public class TechnicalMember_Controller : Controller
         }
     }
 
-    //----------------------------------Get the Periodic Maintenance Reports by memberID--------------------------------
-  /*  [HttpGet]
-    [Route("GetPeriodicMaintenanceReportsByMemberID")]
-    public async Task<ActionResult> GetPeriodicMaintenanceReportsByMemberID([Required] string User_Id)
-    {
-        var response = await conn.QueryAsync<Report>(
-            "SELECT * FROM [kauSupport].[dbo].[Reports] " +
-            "WHERE reportType = @reportType AND assignedTaskTo = @assignedTaskTo AND reportStatus = @reportStatus",
-            new { reportType = "Periodic maintenance", assignedTaskTo = User_Id, reportStatus = "in process" });
 
-        if (response.Any())
-        {
-            return Ok(response);
-        }
-        else
-        {
-            return BadRequest("Reports not found ...");
-        }
-    }
-*/
-
-    //-----------------------------------------Get the device with all reports on it------------------------------------
+    //-----------------------------------------Get a device and all reports on it---------------------------------------
     [HttpGet]
     [Route("SearchForDevice")]
     public async Task<ActionResult> SearchForDevice([Required] string Serial_Number)
     {
+        var conn = _dbConnectionFactory.CreateConnection();
         // we get the devices
         var returnedDevice = await conn.QueryFirstOrDefaultAsync<Device>(
             "select * from  [kauSupport].[dbo].[Devices] where serialNumber = @serialNumber",
@@ -99,6 +79,8 @@ public class TechnicalMember_Controller : Controller
     [Route("DeleteDeviceBySerialNumber")]
     public async Task<ActionResult> DeleteDeviceBySerialNumber([Required] string Serial_Number)
     {
+        var conn = _dbConnectionFactory.CreateConnection();
+
         int rowsAffected = await conn.ExecuteAsync(
             "DELETE FROM [kauSupport].[dbo].[Devices] WHERE serialNumber = @serialNumber",
             new { serialNumber = Serial_Number });
@@ -124,6 +106,8 @@ public class TechnicalMember_Controller : Controller
     )
 
     {
+        var conn = _dbConnectionFactory.CreateConnection();
+
         DateTime Arrival_Date = DateTime.Now.Date;
         DateTime Next_Periodic_Date = Arrival_Date.AddMonths(6);
 
@@ -177,12 +161,14 @@ public class TechnicalMember_Controller : Controller
         }
     }
 
-    //----------------------------------Update devcie-------------------------------------------------------------------
+    //----------------------------------Update Device-------------------------------------------------------------------
     [HttpPut]
     [Route("UpdateDevice")]
     public async Task<ActionResult> UpdateDevice(string Serial_Number, string Device_Status, string Device_Type,
         DateTime NextPeriodic_Date, DateTime Arrival_Date, int Device_Number, string Lab_Number)
     {
+        var conn = _dbConnectionFactory.CreateConnection();
+
         var effectedRows =
             await conn.ExecuteAsync(
                 "UPDATE [kauSupport].[dbo].[Devices] SET serialNumber = @serialNumber, deviceStatus = @deviceStatus," +
@@ -214,6 +200,8 @@ public class TechnicalMember_Controller : Controller
     [Route("handelReport")]
     public async Task<ActionResult> handelReport([Required] int Report_Id, [Required] string Action_Taken)
     {
+        var conn = _dbConnectionFactory.CreateConnection();
+
         DateTime Repair_Date = DateTime.Now.Date;
         string Report_Status = "Resolved";
 
@@ -270,39 +258,49 @@ public class TechnicalMember_Controller : Controller
     [Route("SuggestSolution")]
     public async Task<IActionResult> SuggestSolution(string problem)
     {
-        var myKey = await conn.QueryFirstOrDefaultAsync<string>(
-            "select mykey from  [kauSupport].[dbo].[API]");
+        var conn = _dbConnectionFactory.CreateConnection();
+        try
+        {
+            var myKey = await conn.QueryFirstOrDefaultAsync<string>(
+                "select mykey from  [kauSupport].[dbo].[API]");
 
 
-        var openAi = new OpenAIAPI(new APIAuthentication(myKey));
+            var openAi = new OpenAIAPI(new APIAuthentication(myKey));
 
-        var conv = openAi.Chat.CreateConversation();
+            var conv = openAi.Chat.CreateConversation();
 
-        //
-        conv.AppendSystemMessage(
-            "You are the technical support assistant. Provide direct and clear solutions for PC problems reported by users. Avoid suggesting to contact technical support or seek external help. Focus on actionable steps that can be taken immediately.");
+            //
+            conv.AppendSystemMessage(
+                "You are the technical support assistant. Provide direct and clear solutions for PC problems reported by users. Avoid suggesting to contact technical support or seek external help. Focus on actionable steps that can be taken immediately.");
 
-        // Sample user inputs with expected chatbot outputs
-        conv.AppendUserInput("Slow computer performance");
-        conv.AppendExampleChatbotOutput("1-Run a disk cleanup and defragmentation./n" +
-                                        "2- Disable unnecessary startup programs./n");
+            // Sample user inputs with expected chatbot outputs
+            conv.AppendUserInput("Slow computer performance");
+            conv.AppendExampleChatbotOutput("1-Run a disk cleanup and defragmentation." +
+                                            "2- Disable unnecessary startup programs.");
 
-        conv.AppendUserInput("Printer not responding");
-        conv.AppendExampleChatbotOutput("1- Ensure printer is turned on and connected./n " +
-                                        "2- Check for printer driver updates./n");
-        conv.AppendUserInput("الطابعة ما تشتغل");
-        conv.AppendExampleChatbotOutput("1- Ensure printer is turned on and connected./n " +
-                                        "2- Check for printer driver updates./n");
+            conv.AppendUserInput("Printer not responding");
+            conv.AppendExampleChatbotOutput("1- Ensure printer is turned on and connected." +
+                                            "2- Check for printer driver updates./n");
+            conv.AppendUserInput("الطابعة ما تشتغل");
+            conv.AppendExampleChatbotOutput("1- Ensure printer is turned on and connected." +
+                                            "2- Check for printer driver updates.");
 
-        conv.AppendUserInput("My computer won't boot or light up");
-        conv.AppendExampleChatbotOutput("Look for signs of power, and ensure the monitor is turned on and connected.");
+            conv.AppendUserInput("My computer won't boot or light up");
+            conv.AppendExampleChatbotOutput(
+                "Look for signs of power, and ensure the monitor is turned on and connected.");
 
 
-        // Handling the actual user input
-        conv.AppendUserInput(problem + "Result in English");
-        var response = await conv.GetResponseFromChatbotAsync();
+            // Handling the actual user input
+            conv.AppendUserInput(problem + "Result in English");
+            var response = await conv.GetResponseFromChatbotAsync();
 
-        return Ok(response);
+            return Ok(response);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"An error occurred: {ex.Message}");
+            return StatusCode(500, "Internal Server Error");
+        }
     }
 
     //-------------------------------------------Get all notifications--------------------------------------------------
@@ -310,6 +308,8 @@ public class TechnicalMember_Controller : Controller
     [Route("GetNotifications")]
     public async Task<ActionResult> getNotifications()
     {
+        var conn = _dbConnectionFactory.CreateConnection();
+
         var response = await conn.QueryAsync<Notification>("select * from  [kauSupport].[dbo].[Notifications]");
         if (response.Any())
         {
@@ -318,16 +318,18 @@ public class TechnicalMember_Controller : Controller
 
         else
         {
-            return BadRequest("No Notifications found found...");
+            return BadRequest("No Notifications found ...");
         }
     }
 
-    //----------------------------Get report Notifications for a technical support member-------------------------------
+    //----------------------------Get  Notifications for a technical support member-----------------------------------
     [HttpGet]
     [Route("GetReportsNotificationsByUserId")]
     public async Task<ActionResult> getReportsNotificationsByUserId(string User_Id)
     {
-        var notificationTypes = new[] { "issue", "Periodic maintenance" }; 
+        var conn = _dbConnectionFactory.CreateConnection();
+
+        var notificationTypes = new[] { "issue", "Periodic maintenance" };
         var response = await conn.QuerySingleAsync<int>(
             "select COUNT(*) from  [kauSupport].[dbo].[Notifications] where userId= @userId And NotificationType IN @NotificationType",
             new
@@ -340,29 +342,14 @@ public class TechnicalMember_Controller : Controller
         return Ok(response);
     }
 
-    //--------------------------Get periodic maintenance Notifications for a technical support member-------------------
-   /* [HttpGet]
-    [Route("GetPeriodicNotificationsByUserId")]
-    public async Task<ActionResult> getPeriodicNotificationsByUserId(string User_Id)
-    {
-        var Notification_Type = "Periodic maintenance"; // To retrieve only Periodic maintenance Notifications...
-        var response = await conn.QuerySingleAsync<int>(
-            "select COUNT(*) from  [kauSupport].[dbo].[Notifications] where userId= @userId And NotificationType=@NotificationType",
-            new
-            {
-                userId = User_Id,
-                NotificationType = Notification_Type
-            });
-
-
-        return Ok(response);
-    }*/
 
     //--------------------------Get service requests Notifications for a technical support member-----------------------
     [HttpGet]
     [Route("GetRequestsNotificationsByUserId")]
     public async Task<ActionResult> GetRequestsNotificationsByUserId(string User_Id)
     {
+        var conn = _dbConnectionFactory.CreateConnection();
+
         var Notification_Type = "Service Request"; // To retrieve only service requests Notifications...
         var response = await conn.QuerySingleAsync<int>(
             "select COUNT(*) from  [kauSupport].[dbo].[Notifications] where userId= @userId And NotificationType=@NotificationType",
@@ -382,6 +369,8 @@ public class TechnicalMember_Controller : Controller
     public async Task<ActionResult> handelRequest([Required] int Request_Id, [Required] string Replay,
         [Required] string Status)
     {
+        var conn = _dbConnectionFactory.CreateConnection();
+
         var affectedRowa = await conn.ExecuteAsync(
             "UPDATE  [kauSupport].[dbo].[services] set TechnicalSupportReply = @TechnicalSupportReply, RequestStatus= @RequestStatus  where RequestID = @RequestID",
             new
@@ -403,4 +392,5 @@ public class TechnicalMember_Controller : Controller
             return BadRequest("Could not handel request");
         }
     }
+    //------------------------------------------------------------------------------------------------------------------
 }

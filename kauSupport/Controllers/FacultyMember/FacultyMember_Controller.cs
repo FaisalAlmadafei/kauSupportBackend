@@ -1,7 +1,9 @@
 using System.ComponentModel.DataAnnotations;
+using System.Data;
 using System.Data.SqlClient;
 using Microsoft.AspNetCore.Mvc;
 using Dapper;
+using kauSupport.Connection;
 using kauSupport.Models;
 
 namespace kauSupport.Controllers.FacultyMember;
@@ -10,13 +12,13 @@ namespace kauSupport.Controllers.FacultyMember;
 [ApiController]
 public class FacultyMember_Controller : ControllerBase
 {
-    private readonly IConfiguration config;
-    private SqlConnection conn;
+   
+    private readonly IDbConnectionFactory _dbConnectionFactory;
 
-    public FacultyMember_Controller(IConfiguration config)
+    public FacultyMember_Controller(  IDbConnectionFactory dbConnectionFactory)
     {
-        this.config = config;
-        conn = conn = new SqlConnection(config.GetConnectionString("DefaultConnection"));
+      
+        _dbConnectionFactory = dbConnectionFactory; // Instance of SqlConnectionFactory came form dependency injection 
     }
     //------------------------------------------------------------------------------------------------------------------
 
@@ -25,6 +27,8 @@ public class FacultyMember_Controller : ControllerBase
     [Route("GetLabs")]
     public async Task<ActionResult> getLabs()
     {
+        
+        var conn = _dbConnectionFactory.CreateConnection();
         var response = await conn.QueryAsync<Lab>("select * from  [kauSupport].[dbo].[Labs]");
         if (response.Any())
         {
@@ -37,16 +41,13 @@ public class FacultyMember_Controller : ControllerBase
         }
     }
     //------------------------------------------------------------------------------------------------------------------
-
-    //--------------------------------Get all Devices-------------------------------------------------------------------
-    
-    //------------------------------------------------------------------------------------------------------------------
-
     //--------------------------------Get all Devices in a specific Lab-------------------------------------------------
     [HttpGet]
     [Route("GetLabDevices/ID=" + "{lab_Number}")]
     public async Task<ActionResult> getLabDevices(string lab_Number)
     {
+        var conn = _dbConnectionFactory.CreateConnection();
+
         var response = await conn.QueryAsync<Device>(
             "select * from  [kauSupport].[dbo].[Devices] where deviceLocatedLab = @deviceLocatedLab ORDER BY deviceNumber",
             new { deviceLocatedLab = lab_Number });
@@ -67,16 +68,14 @@ public class FacultyMember_Controller : ControllerBase
     [Route("AddReport")]
     public async Task<ActionResult> addReport([Required] String Device_Number, [Required] String Serial_Number,
         [Required] String Device_LocatedLab,
-        [Required] String Problem_Description, [Required] String Reported_By , [Required] String Problem_Type)
+        [Required] String Problem_Description, [Required] String Reported_By, [Required] String Problem_Type)
     {
+        var conn = _dbConnectionFactory.CreateConnection();
+
         DateTime currentDateTime = DateTime.Now.Date;
         string Report_Type = "issue";
 
-        if (!IsDeviceReportable(Serial_Number))
-        {
-            return BadRequest("This device is reported, try again within 3 days.");
-        }
-
+    
         // we will get the Admin or supervisor to use their ID
         var Supervisor = await conn.QueryFirstOrDefaultAsync<User>(
             "select * from  [kauSupport].[dbo].[Users] WHERE role = @role",
@@ -86,7 +85,6 @@ public class FacultyMember_Controller : ControllerBase
             "select * from  [kauSupport].[dbo].[Users] WHERE userId = @userId",
             new { userId = Reported_By });
 
-        
 
         // we will add new report and get the report ID
         var Report_ID = await conn.QuerySingleAsync<int>(
@@ -96,22 +94,15 @@ public class FacultyMember_Controller : ControllerBase
             {
                 deviceNumber = Device_Number, serialNumber = Serial_Number, deviceLocatedLab = Device_LocatedLab,
                 reportType = Report_Type, problemDescription = Problem_Description, reportedBy = Reported_By,
-                reportDate = currentDateTime, assignedTaskTo = Supervisor.UserId  , problemType = Problem_Type , assignedToFirstName= Supervisor.firstName , assignedToLastName= Supervisor.lastName , reportedByFirstName= FacultyMember.firstName , reportedByLastName= FacultyMember.lastName
-                
+                reportDate = currentDateTime, assignedTaskTo = Supervisor.UserId, problemType = Problem_Type,
+                assignedToFirstName = Supervisor.firstName, assignedToLastName = Supervisor.lastName,
+                reportedByFirstName = FacultyMember.firstName, reportedByLastName = FacultyMember.lastName
             });
 
         string status = "Reported";
         await conn.ExecuteAsync(
             "UPDATE [kauSupport].[dbo].[Devices] SET deviceStatus = @deviceStatus WHERE serialNumber = @serialNumber; ",
             new { serialNumber = Serial_Number, deviceStatus = status });
-
-        HttpContext.Response.Cookies.Append(
-            "ReportedDevice_" + Serial_Number,
-            currentDateTime.ToString(),
-            new CookieOptions
-            {
-                Expires = DateTime.Now.AddDays(3) // Set the cookie to expire in 3 days
-            });
 
         // We weill add new notification 
         await conn.ExecuteAsync(
@@ -126,29 +117,16 @@ public class FacultyMember_Controller : ControllerBase
         return Ok("Report added successfully");
     }
     //------------------------------------------------------------------------------------------------------------------
-
-    //--------------------------This is a method that check if device is reported---------------------------------------
-    private bool IsDeviceReportable(string serialNumber)
-    {
-        // Check if the cookie exists and if the device has been reported within the last 3 days
-        var cookieValue = HttpContext.Request.Cookies["ReportedDevice_" + serialNumber];
-
-        if (!string.IsNullOrEmpty(cookieValue) && DateTime.TryParse(cookieValue, out var lastReportDate))
-        {
-            return (DateTime.Now - lastReportDate).Days >= 3;
-        }
-
-        return true; // The device can be reported if there's no cookie or if the last report is older than 3 days
-    }
-    //------------------------------------------------------------------------------------------------------------------
-
     //-------------------------------Get user previous reports by userID------------------------------------------------
     [HttpGet]
     [Route("GetMyReports")]
     public async Task<ActionResult> getMyReports([Required] string User_Id)
     {
+        var conn = _dbConnectionFactory.CreateConnection();
+
         var response = await conn.QueryAsync<Report>(
-            "select * from  [kauSupport].[dbo].[Reports] where reportedBy= @reportedBy ORDER BY reportID DESC", new { reportedBy = User_Id });
+            "select * from  [kauSupport].[dbo].[Reports] where reportedBy= @reportedBy ORDER BY reportID DESC",
+            new { reportedBy = User_Id });
         if (response.Any())
         {
             return Ok(response);
@@ -156,7 +134,7 @@ public class FacultyMember_Controller : ControllerBase
 
         else
         {
-            return BadRequest("You have not report any device yet...");
+            return BadRequest("You have not reported any device yet...");
         }
     }
     //------------------------------------------------------------------------------------------------------------------
@@ -167,6 +145,8 @@ public class FacultyMember_Controller : ControllerBase
     public async Task<ActionResult> GetLabsWithDeviceCounts()
     {
         // Retrieve all labs
+        var conn = _dbConnectionFactory.CreateConnection();
+
         var labs = await conn.QueryAsync<Lab>("SELECT * FROM [kauSupport].[dbo].[Labs]");
         var labsWithDeviceCountsList = new List<LabWithDeviceCounts>();
 
@@ -210,10 +190,11 @@ public class FacultyMember_Controller : ControllerBase
     [Route("RequestService")]
     public async Task<ActionResult> RequestService([Required] string Request_, [Required] string Requested_By)
     {
-        var supervisor = await conn.QueryFirstOrDefaultAsync<User>(
+                var conn = _dbConnectionFactory.CreateConnection();
+                var supervisor = await conn.QueryFirstOrDefaultAsync<User>(
             "select * from  [kauSupport].[dbo].[Users] WHERE role = @role",
             new { role = "Supervisor" });
-        
+
         var FacultyMember = await conn.QueryFirstOrDefaultAsync<User>(
             "select * from  [kauSupport].[dbo].[Users] WHERE userId = @userId",
             new { userId = Requested_By });
@@ -226,12 +207,10 @@ public class FacultyMember_Controller : ControllerBase
                 Request = Request_,
                 RequestedBy = Requested_By,
                 AssignedTo = supervisor.UserId,
-                assignedToFirstName= supervisor.firstName , 
-                assignedToLastName= supervisor.lastName , 
-                requestedByFirstName= FacultyMember.firstName , 
+                assignedToFirstName = supervisor.firstName,
+                assignedToLastName = supervisor.lastName,
+                requestedByFirstName = FacultyMember.firstName,
                 requestedByLastName = FacultyMember.lastName
-                
-                
             });
 
         if (Request_Id > 0)
@@ -259,8 +238,10 @@ public class FacultyMember_Controller : ControllerBase
     [Route("GetMyRequests")]
     public async Task<ActionResult> getMyRequests([Required] string User_Id)
     {
+        var conn = _dbConnectionFactory.CreateConnection();
+
         var response = await conn.QueryAsync<Service>(
-            "select * from  [kauSupport].[dbo].[Services] where RequestedBy= @RequestedBy",
+            "select * from  [kauSupport].[dbo].[Services] where RequestedBy= @RequestedBy  ORDER BY RequestID DESC",
             new { RequestedBy = User_Id });
         if (response.Any())
         {

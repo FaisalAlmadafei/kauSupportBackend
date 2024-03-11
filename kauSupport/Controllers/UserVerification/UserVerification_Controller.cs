@@ -1,6 +1,7 @@
 using System.ComponentModel.DataAnnotations;
 using System.Data.SqlClient;
 using Dapper;
+using kauSupport.Connection;
 using kauSupport.Models;
 using Microsoft.AspNetCore.Mvc;
 
@@ -10,14 +11,12 @@ namespace kauSupport.Controllers.UserVerification;
 [ApiController]
 public class UserVerification_Controller : Controller
 {
-    private readonly IConfiguration config;
-    private SqlConnection conn;
+    private readonly IDbConnectionFactory _dbConnectionFactory;
 
 
-    public UserVerification_Controller(IConfiguration config)
+    public UserVerification_Controller(IDbConnectionFactory dbConnectionFactory)
     {
-        this.config = config;
-        conn = conn = new SqlConnection(config.GetConnectionString("DefaultConnection"));
+        _dbConnectionFactory = dbConnectionFactory; // Instance of SqlConnectionFactory came form dependency injection 
     }
 
     //------------------------------------------------------------------------------------------------------------------
@@ -26,6 +25,8 @@ public class UserVerification_Controller : Controller
     [Route("LogIn")]
     public async Task<IActionResult> LogIn([Required] string User_Id, [Required] string Password)
     {
+        var conn = _dbConnectionFactory.CreateConnection();
+
         // Retrieve the user by User_Id
         var userPass = await conn.QueryFirstOrDefaultAsync<string>(
             "SELECT password FROM [kauSupport].[dbo].[Users] WHERE userId = @UserId",
@@ -36,7 +37,7 @@ public class UserVerification_Controller : Controller
         {
             var user = await conn.QueryFirstOrDefaultAsync<User>(
                 "select UserId, firstName, lastName, role,email from  [kauSupport].[dbo].[Users] WHERE UserId = @UserId",
-                new { UserId = User_Id });       
+                new { UserId = User_Id });
             return Ok(user);
         }
         else
@@ -50,8 +51,9 @@ public class UserVerification_Controller : Controller
     [Route("AddPass")]
     public async Task<IActionResult> AddPass(string User_Id, string Password)
     {
-        string hashedPassword = BCrypt.Net.BCrypt.HashPassword(Password);
+        var conn = _dbConnectionFactory.CreateConnection();
 
+        string hashedPassword = BCrypt.Net.BCrypt.HashPassword(Password);
         // Define the SQL query to update the password for a user
         string sqlQuery = "UPDATE [kauSupport].[dbo].[Users] SET password = @password WHERE UserId = @UserId";
 
@@ -72,6 +74,8 @@ public class UserVerification_Controller : Controller
     [Route("GetUsers")]
     public async Task<ActionResult> getUsers()
     {
+        var conn = _dbConnectionFactory.CreateConnection();
+
         var users = await conn.QueryAsync<User>(
             "select UserId, firstName, lastName, role,email  from   [kauSupport].[dbo].[Users]");
         if (users.Any())
@@ -89,6 +93,8 @@ public class UserVerification_Controller : Controller
     [Route("GetTechnicalMembers")]
     public async Task<ActionResult> GetTechnicalMembers()
     {
+        var conn = _dbConnectionFactory.CreateConnection();
+
         var users = await conn.QueryAsync<User>(
             "select UserId, firstName, lastName, role,email  from   [kauSupport].[dbo].[Users] WHERE role= @role",
             new
@@ -110,6 +116,8 @@ public class UserVerification_Controller : Controller
     [Route("GetUserById")]
     public async Task<ActionResult> getUser([Required] String user_Id)
     {
+        var conn = _dbConnectionFactory.CreateConnection();
+
         var user = await conn.QueryFirstOrDefaultAsync<User>(
             "select UserId, firstName, lastName, role,email from  [kauSupport].[dbo].[Users] WHERE UserId = @UserId",
             new { UserId = user_Id });
