@@ -250,7 +250,7 @@ public class FacultyMember_Controller : ControllerBase
 
         else
         {
-            return BadRequest("No have not report any device yet...");
+            return BadRequest("You have not requested any service yet...");
         }
     }
     //------------------------------------------------------------------------------------------------------------------

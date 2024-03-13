@@ -122,15 +122,12 @@ public class TechnicalSupervisor_Controller : Controller
             string assignedTo_FirstName = supervisor.firstName;
             string assignedTo_LastName = supervisor.lastName;
 
-            // here we update the nextPeriodicDate
-            await conn.ExecuteAsync(
-                "UPDATE [kauSupport].[dbo].[Devices] SET nextPeriodicDate = @nextPeriodicDate WHERE serialNumber = @serialNumber",
-                new { nextPeriodicDate = newPeriodicMaintenanceDate, serialNumber = Serial_Number });
+            // here we update the nextPeriodicDate and device status
             string status = "Reported";
             await conn.ExecuteAsync(
-                "UPDATE [kauSupport].[dbo].[Devices] SET deviceStatus = @deviceStatus WHERE serialNumber = @serialNumber; ",
-                new { serialNumber = Serial_Number, deviceStatus = status });
-
+                "UPDATE [kauSupport].[dbo].[Devices] SET nextPeriodicDate = @nextPeriodicDate,  deviceStatus = @deviceStatus WHERE serialNumber = @serialNumber",
+                new { nextPeriodicDate = newPeriodicMaintenanceDate, serialNumber = Serial_Number , deviceStatus = status });
+         
             // we add a new report to reports table..
             var Report_ID = await conn.QuerySingleAsync<int>(
                 "INSERT INTO  [kauSupport].[dbo].[Reports] ( deviceNumber, serialNumber,deviceLocatedLab, reportType , problemDescription, reportedBy , reportDate, assignedTaskTo ,  problemType , reportedByFirstName ,reportedByLastName ,assignedToFirstName ,assignedToLastName) values " +
@@ -385,7 +382,7 @@ public class TechnicalSupervisor_Controller : Controller
         // Query to get the count for each problem type of report
         var reportsWithTypeCounts = await conn.QueryAsync<ReportSummary>(
             "SELECT problemType, COUNT(*) AS Count FROM [kauSupport].[dbo].[Reports] GROUP BY problemType");
-
+         Console.WriteLine(reportsWithTypeCounts);
 
         var reportsSummaryList = new List<ReportSummary>();
 
@@ -411,7 +408,7 @@ public class TechnicalSupervisor_Controller : Controller
 
         return Ok(result);
     }
-
+ 
     //------------------------------------Get total number of reports on a specific device------------------------------
     [HttpGet]
     [Route("GetDeviceReportStatistics")]

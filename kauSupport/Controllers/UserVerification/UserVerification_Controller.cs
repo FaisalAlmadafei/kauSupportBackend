@@ -47,28 +47,7 @@ public class UserVerification_Controller : Controller
     }
     //------------------------------------------------------------------------------------------------------------------
 
-    [HttpPut]
-    [Route("AddPass")]
-    public async Task<IActionResult> AddPass(string User_Id, string Password)
-    {
-        var conn = _dbConnectionFactory.CreateConnection();
-
-        string hashedPassword = BCrypt.Net.BCrypt.HashPassword(Password);
-        // Define the SQL query to update the password for a user
-        string sqlQuery = "UPDATE [kauSupport].[dbo].[Users] SET password = @password WHERE UserId = @UserId";
-
-        // Provide parameters for the query
-        var parameters = new
-        {
-            UserId = User_Id,
-            password = hashedPassword
-        };
-
-
-        await conn.ExecuteAsync(sqlQuery, parameters);
-        return Ok("Password updated successfully.");
-    }
-
+   
     //-----------------------------------------------------------------------------------------------------------------
     [HttpGet]
     [Route("GetUsers")]
