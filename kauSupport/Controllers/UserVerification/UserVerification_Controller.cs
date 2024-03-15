@@ -47,25 +47,25 @@ public class UserVerification_Controller : Controller
     }
     //------------------------------------------------------------------------------------------------------------------
 
-   
-    //-----------------------------------------------------------------------------------------------------------------
-    [HttpGet]
-    [Route("GetUsers")]
-    public async Task<ActionResult> getUsers()
-    {
-        var conn = _dbConnectionFactory.CreateConnection();
 
-        var users = await conn.QueryAsync<User>(
-            "select UserId, firstName, lastName, role,email  from   [kauSupport].[dbo].[Users]");
-        if (users.Any())
-        {
-            return Ok(users);
-        }
-        else
-        {
-            return BadRequest("No users found..");
-        }
-    }
+    //-----------------------------------------------------------------------------------------------------------------
+    /* [HttpGet]
+     [Route("GetUsers")]
+     public async Task<ActionResult> getUsers()
+     {
+         var conn = _dbConnectionFactory.CreateConnection();
+ 
+         var users = await conn.QueryAsync<User>(
+             "select UserId, firstName, lastName, role,email  from   [kauSupport].[dbo].[Users]");
+         if (users.Any())
+         {
+             return Ok(users);
+         }
+         else
+         {
+             return BadRequest("No users found..");
+         }
+     }*/
     //------------------------------------------------------------------------------------------------------------------
 
     [HttpGet]
@@ -89,24 +89,50 @@ public class UserVerification_Controller : Controller
             return BadRequest("No users found..");
         }
     }
+}
 
-    //------------------------------------------------------------------------------------------------------------------
-    [HttpGet]
-    [Route("GetUserById")]
-    public async Task<ActionResult> getUser([Required] String user_Id)
+//------------------------------------------------------------------------------------------------------------------
+/*   [HttpGet]
+   [Route("GetUserById")]
+   public async Task<ActionResult> getUser([Required] String user_Id)
+   {
+       var conn = _dbConnectionFactory.CreateConnection();
+
+       var user = await conn.QueryAsync<User>(
+           "select UserId, firstName, lastName, role,email from  [kauSupport].[dbo].[Users] WHERE UserId = @UserId",
+           new { UserId = user_Id });
+       if (user != null)
+       {
+           return Ok(user);
+       }
+       else
+       {
+           return BadRequest("User Not found");
+       }
+   }
+}
+*/
+/*
+ *  [HttpPut]
+    [Route("AddPass")]
+    public async Task<IActionResult> AddPass(string User_Id, string Password)
     {
         var conn = _dbConnectionFactory.CreateConnection();
 
-        var user = await conn.QueryFirstOrDefaultAsync<User>(
-            "select UserId, firstName, lastName, role,email from  [kauSupport].[dbo].[Users] WHERE UserId = @UserId",
-            new { UserId = user_Id });
-        if (user != null)
+        string hashedPassword = BCrypt.Net.BCrypt.HashPassword(Password);
+        // Define the SQL query to update the password for a user
+        string sqlQuery = "UPDATE [kauSupport].[dbo].[Users] SET password = @password WHERE UserId = @UserId";
+
+        // Provide parameters for the query
+        var parameters = new
         {
-            return Ok(user);
-        }
-        else
-        {
-            return BadRequest("User Not found");
-        }
+            UserId = User_Id,
+            password = hashedPassword
+        };
+
+
+        await conn.ExecuteAsync(sqlQuery, parameters);
+        return Ok("Password updated successfully.");
     }
-}
+
+ */

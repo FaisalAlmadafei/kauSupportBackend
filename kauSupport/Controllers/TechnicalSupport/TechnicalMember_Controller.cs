@@ -112,17 +112,17 @@ public class TechnicalMember_Controller : Controller
         DateTime Next_Periodic_Date = Arrival_Date.AddMonths(6);
 
         // Check if the device already exists
-        var deviceExists = await conn.ExecuteScalarAsync<int>(
+        var deviceReturned = await conn.QuerySingleAsync<int>(
             "SELECT COUNT(*) FROM [kauSupport].[dbo].[Devices] WHERE serialNumber = @serialNumber",
             new { serialNumber = Serial_Number });
-        if (deviceExists > 0)
+        if (deviceReturned > 0)
         {
             // Device already exists, return a conflict response
             return BadRequest("Device already exists!");
         }
 
         // Get the capacity of the lab before adding a new device to it
-        int labCapacity = await conn.ExecuteScalarAsync<int>(
+        int labCapacity = await conn.QuerySingleAsync<int>(
             "SELECT labCapacity FROM [kauSupport].[dbo].[Labs] WHERE labNumber = @labNumber",
             new { labNumber = Device_LocatedLab });
 
@@ -162,7 +162,7 @@ public class TechnicalMember_Controller : Controller
     }
 
     //----------------------------------Update Device-------------------------------------------------------------------
-    [HttpPut]
+   /* [HttpPut]
     [Route("UpdateDevice")]
     public async Task<ActionResult> UpdateDevice(string Serial_Number, string Device_Status, string Device_Type,
         DateTime NextPeriodic_Date, DateTime Arrival_Date, int Device_Number, string Lab_Number)
@@ -194,7 +194,7 @@ public class TechnicalMember_Controller : Controller
             return BadRequest("Problem in updating the device");
         }
     }
-
+*/
     // ----------------------------------------Handel report and fix problem-------------------------------------------
     [HttpPut]
     [Route("handelReport")]
@@ -206,7 +206,7 @@ public class TechnicalMember_Controller : Controller
         string Report_Status = "Resolved";
 
         var report = await conn.QueryFirstOrDefaultAsync<Report>(
-            "SELECT reportType from [kauSupport].[dbo].[Reports] where reportID = @reportID ",
+            "SELECT * from [kauSupport].[dbo].[Reports] where reportID = @reportID ",
             new { reportID = Report_Id });
 
         if (report == null)
@@ -238,8 +238,7 @@ public class TechnicalMember_Controller : Controller
                 serialNumber = deviceSerialNumber
             });
 
-        //Remove the cookies
-        HttpContext.Response.Cookies.Delete("ReportedDevice_" + deviceSerialNumber);
+       
         //Delete the notification
         await conn.ExecuteAsync(
             "Delete from [kauSupport].[dbo].[Notifications]  WHERE reportID= @reportID AND NotificationType= @NotificationType",
@@ -370,8 +369,21 @@ public class TechnicalMember_Controller : Controller
         [Required] string Status)
     {
         var conn = _dbConnectionFactory.CreateConnection();
+        var request =  await conn.QueryAsync(
+            "SELECT * from [kauSupport].[dbo].[services]   where RequestID = @RequestID",
+            new
+            {
+               
+                RequestID = Request_Id
+            });
 
-        var affectedRowa = await conn.ExecuteAsync(
+        if (!request.Any() )
+        {
+            return BadRequest("Could not handel request");
+            
+        }
+
+          await conn.ExecuteAsync(
             "UPDATE  [kauSupport].[dbo].[services] set TechnicalSupportReply = @TechnicalSupportReply, RequestStatus= @RequestStatus  where RequestID = @RequestID",
             new
             {
@@ -380,17 +392,13 @@ public class TechnicalMember_Controller : Controller
                 RequestID = Request_Id
             });
 
-        if (affectedRowa == 1)
-        {
+       
             await conn.ExecuteAsync(
                 "Delete from [kauSupport].[dbo].[Notifications]  WHERE reportID= @reportID AND NotificationType= @NotificationType",
                 new { reportID = Request_Id, NotificationType = "Service Request" });
             return Ok("Request handled successfully");
-        }
-        else
-        {
-            return BadRequest("Could not handel request");
-        }
+     
+      
     }
     //------------------------------------------------------------------------------------------------------------------
 }

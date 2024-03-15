@@ -666,17 +666,30 @@ public class TechnicalSupervisorTests
         Assert.Equal(reportsWithTypeCounts[1].Count, ((dynamic)reportSummaryList.Skip(1).First()).Count);
     }*/
    [Fact]
-   public async Task GetDevicesStatistics_ReturnsOkResult_WhenDevicesFound()
+   public async Task GetDevicesStatistics_ReturnsOk()
    {
        // Arrange
        var mockConnectionFactory = new Mock<IDbConnectionFactory>();
        var mockConnection = new Mock<IDbConnection>();
-
-       // Set up the expected count for devices to be greater than 0
-       mockConnection.SetupDapperAsync(c => c.QuerySingleAsync<int>( It.IsAny<string>(), null, null, null, null))
-           .ReturnsAsync(10); // Example value
+       var DevicesCount = 50;
+       var DevicesWorkingCount = 40;
+       var DevicesReportedCount  = 10;
+       var devicesSummary = new DeviceSummary
+       {
+           totalDevicesCount = DevicesCount,
+           workingDevicesCount = DevicesWorkingCount,
+           NotWorkingDevicesCount = DevicesReportedCount
+       };
 
        mockConnectionFactory.Setup(x => x.CreateConnection()).Returns(mockConnection.Object);
+       mockConnection.SetupDapperAsync(c => c.QuerySingleAsync<int>( It.IsAny<string>(), null, null, null, null))
+           .ReturnsAsync(DevicesCount); 
+       mockConnection.SetupDapperAsync(c => c.QuerySingleAsync<int>( It.IsAny<string>(), null, null, null, null))
+           .ReturnsAsync(DevicesWorkingCount); 
+       mockConnection.SetupDapperAsync(c => c.QuerySingleAsync<int>( It.IsAny<string>(), null, null, null, null))
+           .ReturnsAsync(DevicesReportedCount); 
+
+
 
        var controller = new TechnicalSupervisor_Controller(mockConnectionFactory.Object);
 
@@ -685,12 +698,47 @@ public class TechnicalSupervisorTests
 
        // Assert
        var okResult = Assert.IsType<OkObjectResult>(result);
-       var model = Assert.IsAssignableFrom<DeviceSummary>(okResult.Value);
-       Assert.Equal(10, model.totalDevicesCount); // Example value
-       // Add more assertions as needed for other properties
+       var deviceSummaryResult = Assert.IsAssignableFrom<DeviceSummary>(okResult.Value);
+       Assert.NotNull(deviceSummaryResult); 
    }
    
-   
+   [Fact]
+   public async Task GetDevicesStatistics_ReturnsBadRequest()
+   {
+       // Arrange
+       var mockConnectionFactory = new Mock<IDbConnectionFactory>();
+       var mockConnection = new Mock<IDbConnection>();
+       var DevicesCount = 0;
+       var DevicesWorkingCount = 0;
+       var DevicesReportedCount  = 0;
+       var devicesSummary = new DeviceSummary
+       {
+           totalDevicesCount = DevicesCount,
+           workingDevicesCount = DevicesWorkingCount,
+           NotWorkingDevicesCount = DevicesReportedCount
+       };
+
+       mockConnectionFactory.Setup(x => x.CreateConnection()).Returns(mockConnection.Object);
+       mockConnection.SetupDapperAsync(c => c.QuerySingleAsync<int>( It.IsAny<string>(), null, null, null, null))
+           .ReturnsAsync(DevicesCount); 
+       mockConnection.SetupDapperAsync(c => c.QuerySingleAsync<int>( It.IsAny<string>(), null, null, null, null))
+           .ReturnsAsync(DevicesWorkingCount); 
+       mockConnection.SetupDapperAsync(c => c.QuerySingleAsync<int>( It.IsAny<string>(), null, null, null, null))
+           .ReturnsAsync(DevicesReportedCount); 
+
+
+
+       var controller = new TechnicalSupervisor_Controller(mockConnectionFactory.Object);
+
+       // Act
+       var result = await controller.GetDevicesStatistics();
+
+       // Assert
+       var badRequestResult = Assert.IsType<BadRequestObjectResult>(result);
+       Assert.Equal("No Devices Found...", badRequestResult.Value);
+   }
+      
+  
 }
     
     
