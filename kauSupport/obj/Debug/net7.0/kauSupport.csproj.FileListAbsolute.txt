@@ -352,3 +352,4 @@ C:\Users\ffm05\RiderProjects\kauSupport\kauSupport\bin\Debug\net7.0\Microsoft.Ex
 C:\Users\ffm05\RiderProjects\kauSupport\kauSupport\bin\Debug\net7.0\Moq.dll
 C:\Users\ffm05\RiderProjects\kauSupport\kauSupport\obj\Debug\net7.0\MvcTestingAppManifest.json
 C:\Users\ffm05\RiderProjects\kauSupport\kauSupport\bin\Debug\net7.0\Moq.Dapper.dll
+C:\Users\ffm05\RiderProjects\kauSupport\kauSupport\bin\Debug\net7.0\Konscious.Security.Cryptography.Blake2.dll

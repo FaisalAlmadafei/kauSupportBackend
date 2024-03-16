@@ -45,6 +45,8 @@ public class UserVerification_Controller : Controller
             return BadRequest("Invalid user ID or password.");
         }
     }
+    
+    
     //------------------------------------------------------------------------------------------------------------------
 
 
@@ -89,7 +91,7 @@ public class UserVerification_Controller : Controller
             return BadRequest("No users found..");
         }
     }
-}
+
 
 //------------------------------------------------------------------------------------------------------------------
 /*   [HttpGet]
@@ -112,8 +114,8 @@ public class UserVerification_Controller : Controller
    }
 }
 */
-/*
- *  [HttpPut]
+
+ /*   [HttpPut]
     [Route("AddPass")]
     public async Task<IActionResult> AddPass(string User_Id, string Password)
     {
@@ -133,6 +135,6 @@ public class UserVerification_Controller : Controller
 
         await conn.ExecuteAsync(sqlQuery, parameters);
         return Ok("Password updated successfully.");
-    }
-
- */
+    }*/
+}
+ 

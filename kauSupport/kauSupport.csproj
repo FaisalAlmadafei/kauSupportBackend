@@ -10,6 +10,7 @@
         <PackageReference Include="Azure.Security.KeyVault.Secrets" Version="4.6.0-beta.2" />
         <PackageReference Include="BCrypt.Net-Core" Version="1.6.0" />
         <PackageReference Include="Dapper" Version="2.1.28" />
+        <PackageReference Include="Konscious.Security.Cryptography.Blake2" Version="1.1.0" />
         <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" Version="7.0.16" />
         <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="7.0.15" />
         <PackageReference Include="Moq" Version="4.20.70" />

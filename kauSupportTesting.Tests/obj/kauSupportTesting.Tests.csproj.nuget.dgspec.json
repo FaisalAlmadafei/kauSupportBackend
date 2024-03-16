@@ -142,6 +142,10 @@
               "target": "Package",
               "version": "[2.1.28, )"
             },
+            "Konscious.Security.Cryptography.Blake2": {
+              "target": "Package",
+              "version": "[1.1.0, )"
+            },
             "Microsoft.AspNetCore.Mvc.Testing": {
               "target": "Package",
               "version": "[7.0.16, )"

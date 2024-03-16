@@ -436,6 +436,17 @@
           "lib/netstandard2.0/Moq.Dapper.dll": {}
         }
       },
+      "Konscious.Security.Cryptography.Blake2/1.1.0": {
+        "runtime": {
+          "lib/net6.0/Konscious.Security.Cryptography.Blake2.dll": {
+            "assemblyVersion": "1.1.0.0",
+            "fileVersion": "1.1.0.0"
+          }
+        },
+        "compile": {
+          "lib/net6.0/Konscious.Security.Cryptography.Blake2.dll": {}
+        }
+      },
       "Microsoft.AspNetCore.Mvc.Testing/7.0.16": {
         "dependencies": {
           "Microsoft.AspNetCore.TestHost": "7.0.16",
@@ -1936,6 +1947,7 @@
           "Azure.Security.KeyVault.Secrets": "4.6.0-beta.2",
           "BCrypt.Net-Core": "1.6.0",
           "Dapper": "2.1.28",
+          "Konscious.Security.Cryptography.Blake2": "1.1.0",
           "Microsoft.AspNetCore.Mvc.Testing": "7.0.16",
           "Microsoft.AspNetCore.OpenApi": "7.0.15",
           "Moq": "4.20.70",
@@ -3784,6 +3796,13 @@
       "sha512": "sha512-HQ+ZvKNsg+vH11/IheUSiIZY/BAHm+pN8nsjN1LyNdyn4CJjjVwydNtp1CuJVduQj3TwUtV9ZduZQmwkzzHaqA==",
       "path": "dapper.moq/1.1.0",
       "hashPath": "dapper.moq.1.1.0.nupkg.sha512"
+    },
+    "Konscious.Security.Cryptography.Blake2/1.1.0": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-enWOzNAlBjFcKoiBNVVLsa1ZzOciExznu+sUURE8dx322GI1LzrBxzEuZqjeOoK9oo9RubLtg96/7Y4JtUk9zA==",
+      "path": "konscious.security.cryptography.blake2/1.1.0",
+      "hashPath": "konscious.security.cryptography.blake2.1.1.0.nupkg.sha512"
     },
     "Microsoft.AspNetCore.Mvc.Testing/7.0.16": {
       "type": "package",

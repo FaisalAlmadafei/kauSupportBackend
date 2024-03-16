@@ -430,3 +430,4 @@ C:\Users\ffm05\RiderProjects\kauSupport\kauSupportTesting.Tests\obj\Debug\net7.0
 C:\Users\ffm05\RiderProjects\kauSupport\kauSupportTesting.Tests\obj\Debug\net7.0\kauSupportTesting.Tests.pdb
 C:\Users\ffm05\RiderProjects\kauSupport\kauSupportTesting.Tests\obj\Debug\net7.0\kauSupportTesting.Tests.genruntimeconfig.cache
 C:\Users\ffm05\RiderProjects\kauSupport\kauSupportTesting.Tests\obj\Debug\net7.0\ref\kauSupportTesting.Tests.dll
+C:\Users\ffm05\RiderProjects\kauSupport\kauSupportTesting.Tests\bin\Debug\net7.0\Konscious.Security.Cryptography.Blake2.dll

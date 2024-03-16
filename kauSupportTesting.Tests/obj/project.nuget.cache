@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "dgSpecHash": "B5NZGDiUylReFNwe622ygCzFjbBj9Uvyo1FDK7PJ6c0VzgVo3fr/7F+0IWwmlgvHpxQsBtSjZlV13u+ANZyo0Q==",
+  "dgSpecHash": "YT1sHRvAiawZUOTxK+EHsv1fhy1jafnmtp0Dy6AMwnCwOByKw3JJxqmle6MxTJ1jaxddbTTVT5MA8JAilyHptA==",
   "success": true,
   "projectFilePath": "C:\\Users\\ffm05\\RiderProjects\\kauSupport\\kauSupportTesting.Tests\\kauSupportTesting.Tests.csproj",
   "expectedPackageFiles": [
@@ -11,6 +11,7 @@
     "C:\\Users\\ffm05\\.nuget\\packages\\coverlet.collector\\3.2.0\\coverlet.collector.3.2.0.nupkg.sha512",
     "C:\\Users\\ffm05\\.nuget\\packages\\dapper\\2.1.28\\dapper.2.1.28.nupkg.sha512",
     "C:\\Users\\ffm05\\.nuget\\packages\\dapper.moq\\1.1.0\\dapper.moq.1.1.0.nupkg.sha512",
+    "C:\\Users\\ffm05\\.nuget\\packages\\konscious.security.cryptography.blake2\\1.1.0\\konscious.security.cryptography.blake2.1.1.0.nupkg.sha512",
     "C:\\Users\\ffm05\\.nuget\\packages\\microsoft.aspnetcore.mvc.testing\\7.0.16\\microsoft.aspnetcore.mvc.testing.7.0.16.nupkg.sha512",
     "C:\\Users\\ffm05\\.nuget\\packages\\microsoft.aspnetcore.openapi\\7.0.15\\microsoft.aspnetcore.openapi.7.0.15.nupkg.sha512",
     "C:\\Users\\ffm05\\.nuget\\packages\\microsoft.aspnetcore.testhost\\7.0.16\\microsoft.aspnetcore.testhost.7.0.16.nupkg.sha512",

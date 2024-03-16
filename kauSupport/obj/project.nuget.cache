@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "dgSpecHash": "gU9nrSynLA4ZJ5pdMJ1pYj3bQiXyXtt4XZy0O0ZH3NAaZB6iKgq5dILORG78Q+orJnQLsk9sU/FSGQxrIXghmg==",
+  "dgSpecHash": "xoRiaPBZBUzvu9SMMmZfL9nwDeeFPLvv7wu7pYsBVLXv8GLkSQRaojZMrK94nXLWDa7qXZvgQK1c1quRnbJEtQ==",
   "success": true,
   "projectFilePath": "C:\\Users\\ffm05\\RiderProjects\\kauSupport\\kauSupport\\kauSupport.csproj",
   "expectedPackageFiles": [
@@ -9,6 +9,7 @@
     "C:\\Users\\ffm05\\.nuget\\packages\\bcrypt.net-core\\1.6.0\\bcrypt.net-core.1.6.0.nupkg.sha512",
     "C:\\Users\\ffm05\\.nuget\\packages\\castle.core\\5.1.1\\castle.core.5.1.1.nupkg.sha512",
     "C:\\Users\\ffm05\\.nuget\\packages\\dapper\\2.1.28\\dapper.2.1.28.nupkg.sha512",
+    "C:\\Users\\ffm05\\.nuget\\packages\\konscious.security.cryptography.blake2\\1.1.0\\konscious.security.cryptography.blake2.1.1.0.nupkg.sha512",
     "C:\\Users\\ffm05\\.nuget\\packages\\microsoft.aspnetcore.mvc.testing\\7.0.16\\microsoft.aspnetcore.mvc.testing.7.0.16.nupkg.sha512",
     "C:\\Users\\ffm05\\.nuget\\packages\\microsoft.aspnetcore.openapi\\7.0.15\\microsoft.aspnetcore.openapi.7.0.15.nupkg.sha512",
     "C:\\Users\\ffm05\\.nuget\\packages\\microsoft.aspnetcore.testhost\\7.0.16\\microsoft.aspnetcore.testhost.7.0.16.nupkg.sha512",

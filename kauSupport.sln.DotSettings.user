@@ -1,14 +1,17 @@
 ﻿<wpf:ResourceDictionary xml:space="preserve" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:s="clr-namespace:System;assembly=mscorlib" xmlns:ss="urn:shemas-jetbrains-com:settings-storage-xaml" xmlns:wpf="http://schemas.microsoft.com/winfx/2006/xaml/presentation">
 	<s:String x:Key="/Default/CodeInspection/ExcludedFiles/FilesAndFoldersToSkip2/=CC9DBB18_002D03FD_002D4FB8_002DA5BC_002D1941C2B3BA03_002Fd_003AControllers_002Fd_003ATechnicalSupport_002Ff_003ATechnicalMember_005FController_002Ecs/@EntryIndexedValue">ForceIncluded</s:String>
-	<s:String x:Key="/Default/Environment/UnitTesting/UnitTestSessionStore/Sessions/=a2c36c03_002Dde2b_002D484b_002D9622_002Da92bda2c74ca/@EntryIndexedValue">&lt;SessionState ContinuousTestingMode="0" Name="TechnicalMemberTests" xmlns="urn:schemas-jetbrains-com:jetbrains-ut-session"&gt;&#xD;
+	<s:String x:Key="/Default/Environment/UnitTesting/UnitTestSessionStore/Sessions/=a2c36c03_002Dde2b_002D484b_002D9622_002Da92bda2c74ca/@EntryIndexedValue">&lt;SessionState ContinuousTestingMode="0" IsActive="True" Name="TechnicalMemberTests" xmlns="urn:schemas-jetbrains-com:jetbrains-ut-session"&gt;&#xD;
   &lt;TestAncestor&gt;&#xD;
     &lt;TestId&gt;xUnit::08493BE2-DD61-4D76-861B-D083F878E6A7::net7.0::kauSupport.Tests.TechnicalMemberTests&lt;/TestId&gt;&#xD;
+    &lt;TestId&gt;xUnit::08493BE2-DD61-4D76-861B-D083F878E6A7::net7.0::kauSupport.Tests.UserVerificationTests&lt;/TestId&gt;&#xD;
+    &lt;TestId&gt;xUnit::08493BE2-DD61-4D76-861B-D083F878E6A7::net7.0::kauSupport.Tests.TechnicalSupervisorTests&lt;/TestId&gt;&#xD;
+    &lt;TestId&gt;xUnit::08493BE2-DD61-4D76-861B-D083F878E6A7::net7.0::kauSupport.Tests.FacultyMemberControllerTests&lt;/TestId&gt;&#xD;
   &lt;/TestAncestor&gt;&#xD;
 &lt;/SessionState&gt;</s:String>
 	
 	
 	
-	<s:String x:Key="/Default/Environment/UnitTesting/UnitTestSessionStore/Sessions/=d049714a_002Df1db_002D412a_002Dbaff_002D050b915b898b/@EntryIndexedValue">&lt;SessionState ContinuousTestingMode="0" IsActive="True" Name="GetLabs_ReturnsOkResult_WithLabs" xmlns="urn:schemas-jetbrains-com:jetbrains-ut-session"&gt;&#xD;
+	<s:String x:Key="/Default/Environment/UnitTesting/UnitTestSessionStore/Sessions/=d049714a_002Df1db_002D412a_002Dbaff_002D050b915b898b/@EntryIndexedValue">&lt;SessionState ContinuousTestingMode="0" Name="GetLabs_ReturnsOkResult_WithLabs" xmlns="urn:schemas-jetbrains-com:jetbrains-ut-session"&gt;&#xD;
   &lt;TestAncestor&gt;&#xD;
     &lt;TestId&gt;xUnit::08493BE2-DD61-4D76-861B-D083F878E6A7::net7.0::kauSupport.Tests.FacultyMemberControllerTests&lt;/TestId&gt;&#xD;
     &lt;TestId&gt;xUnit::08493BE2-DD61-4D76-861B-D083F878E6A7::net7.0::kauSupport.Tests.TechnicalSupervisorTests&lt;/TestId&gt;&#xD;
