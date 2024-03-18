@@ -68,7 +68,7 @@ public class TechnicalMemberTests
     //------------------------------------------------------------------------------------------------------------------
 
     [Fact]
-    public async Task GetReports_ReturnsBadRequest()
+    public async Task GetReportsByTechnicalMemberId_ReturnsBadRequest()
     {
         // Arrange
         var mockConnectionFactory = new Mock<IDbConnectionFactory>();
@@ -433,7 +433,7 @@ public class TechnicalMemberTests
     
     //------------------------------------------------------------------------------------------------------------------
     [Fact]
-    public async Task HandelRequestReturnsBadRequestWhenRequestNotFound()
+    public async Task HandelRequestReturnsBadRequest()
     {
         // Arrange
         var mockConnectionFactory = new Mock<IDbConnectionFactory>();

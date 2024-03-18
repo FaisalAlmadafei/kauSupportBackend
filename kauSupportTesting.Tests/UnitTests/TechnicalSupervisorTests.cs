@@ -3,16 +3,20 @@ using Dapper;
 using kauSupport.Connection;
 using kauSupport.Controllers.FacultyMember;
 using kauSupport.Controllers.TechnicalSupport;
+using kauSupport.Controllers.UserVerification;
 using kauSupport.Models;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Configuration;
 using Moq;
 using Moq.Dapper;
+using IConfiguration = Castle.Core.Configuration.IConfiguration;
 
 
 namespace kauSupport.Tests;
 
 public class TechnicalSupervisorTests
 {
+    
     [Fact]
     public async Task GetReports_ReturnsOk()
     {
@@ -88,6 +92,46 @@ public class TechnicalSupervisorTests
         // Assert----------------------------------------------------------
         var badRequestResult = Assert.IsType<BadRequestObjectResult>(result);
         Assert.Equal("No reports found...", badRequestResult.Value);
+    }
+     [Fact]
+    public async Task AssignReport_ReturnsOk()
+    {
+        // Arrange
+        var configuration = new ConfigurationBuilder()
+            .SetBasePath(Directory.GetCurrentDirectory())
+            .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true)
+            .Build();
+        var _dbConnectionFactory = new SqlConnectionFactory(configuration);
+        var technicalSupervisorController = new TechnicalSupervisor_Controller(_dbConnectionFactory);
+        
+        // Act: Assign report 
+        var assignResult = await technicalSupervisorController.AssignReport("2222222", 2453);
+        
+        //Assert
+            var okAssignResult=  Assert.IsType<OkObjectResult>(assignResult);
+            Assert.Equal("Report assigned successfully.", okAssignResult.Value);
+
+        
+
+    }
+
+    [Fact]
+    public async Task AssignReport_ReturnsBadRequest()
+    {
+        // Arrange
+        var configuration = new ConfigurationBuilder()
+            .SetBasePath(Directory.GetCurrentDirectory())
+            .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true)
+            .Build();
+        var _dbConnectionFactory = new SqlConnectionFactory(configuration);
+        var technicalSupervisorController = new TechnicalSupervisor_Controller(_dbConnectionFactory);
+        
+        // Act: Assign report 
+        var assignResult = await technicalSupervisorController.AssignReport("2222222", -1);
+        
+        //Assert
+        var badRequestObject=  Assert.IsType<BadRequestObjectResult>(assignResult);
+        Assert.Equal("Could not assign Report.", badRequestObject.Value);
     }
 
 
@@ -414,6 +458,44 @@ public class TechnicalSupervisorTests
 */
     
     [Fact]
+    public async Task AssignRequest_ReturnsOk()
+    {
+        // Arrange
+        var configuration = new ConfigurationBuilder()
+            .SetBasePath(Directory.GetCurrentDirectory())
+            .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true)
+            .Build();
+        var _dbConnectionFactory = new SqlConnectionFactory(configuration);
+        var technicalSupervisorController = new TechnicalSupervisor_Controller(_dbConnectionFactory);
+        
+        //Act 
+        var assignResult = await technicalSupervisorController.AssignRequest("2222222", 89);
+      
+        // Assert
+        var okAssignResult=  Assert.IsType<OkObjectResult>(assignResult);
+        Assert.Equal("Request assigned successfully", okAssignResult.Value);
+    }
+    [Fact]
+    public async Task AssignRequest_ReturnsBadRequest()
+    {
+        // Arrange
+        var configuration = new ConfigurationBuilder()
+            .SetBasePath(Directory.GetCurrentDirectory())
+            .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true)
+            .Build();
+        var _dbConnectionFactory = new SqlConnectionFactory(configuration);
+        var technicalSupervisorController = new TechnicalSupervisor_Controller(_dbConnectionFactory);
+        
+        //Act 
+        var assignResult = await technicalSupervisorController.AssignRequest("2222222", -1);
+      
+        // Assert
+        var badRequestObject=  Assert.IsType<BadRequestObjectResult>(assignResult);
+        Assert.Equal("Request could not be assigned..", badRequestObject.Value);
+     
+
+    }
+    [Fact]
     public async Task GetDevices_ReturnsOk()
     {
         // Arrange
@@ -454,6 +536,7 @@ public class TechnicalSupervisorTests
         // Check that the returned collection is not empty
         Assert.NotEmpty(returnedDevices);
     }
+    
     [Fact]
     public async Task GetDevices_ReturnsBadRequest()
     {
@@ -481,6 +564,7 @@ public class TechnicalSupervisorTests
 
       
     }
+    
     [Fact]
     public async Task GetTeamProgress_ReturnsOk()
     {
@@ -531,6 +615,7 @@ public class TechnicalSupervisorTests
         // Check that the returned collection is not empty
         Assert.NotEmpty(returnedTeamProgress);
     }
+    
     [Fact]
     public async Task GetTeamProgress_ReturnsBadRequest()
     {
@@ -571,100 +656,70 @@ public class TechnicalSupervisorTests
         var badRequestResult = Assert.IsType<BadRequestObjectResult>(result);
         Assert.Equal("Could not gather data", badRequestResult.Value);
     }
-   /* [Fact]
+    [Fact]
     public async Task GetReportStatistics_ReturnsOk()
     {
         // Arrange
-        var mockConnectionFactory = new Mock<IDbConnectionFactory>();
-        var mockDbConnection = new Mock<IDbConnection>();
-        var reportsTotalCount = 30;
-        String problem = "Hardware";
-
-        var reportsSummaryList = new List<ReportSummary>();
-
-
-        var reportsWithTypeCounts = new List<ReportSummary>
-        {
-            new ReportSummary
-            {
-               problemType = problem ,Count = 0 
-            }
-
-        };
-        mockConnectionFactory.Setup(f => f.CreateConnection()).Returns(mockDbConnection.Object);
-
-        mockDbConnection.SetupDapperAsync(conn => conn.QuerySingleAsync<int>(It.IsAny<string>(), null, null, null, null))
-            .ReturnsAsync(reportsTotalCount);
+        var configuration = new ConfigurationBuilder()
+            .SetBasePath(Directory.GetCurrentDirectory())
+            .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true)
+            .Build();
+        var _dbConnectionFactory = new SqlConnectionFactory(configuration);
+        var technicalSupervisorController = new TechnicalSupervisor_Controller(_dbConnectionFactory);
         
-        mockDbConnection.SetupDapperAsync(conn => conn.QueryAsync<ReportSummary>(It.IsAny<string>(), null, null, null, null))
-            .ReturnsAsync(reportsWithTypeCounts);
-
-     
-        
-        var totalReportSummary = new TotalReportSummary
-        {
-            ReportsTotalCount = reportsTotalCount,
-            Details = reportsWithTypeCounts
-        };
-
-
-
-        var controller = new TechnicalSupervisor_Controller(mockConnectionFactory.Object);
-
-        // Act
-        var result = await controller.GetReportStatistics();
-
-        // Assert
-        var okResult = Assert.IsType<OkObjectResult>(result);
-        
+        //Act
+        var reportStatisticsResult = await technicalSupervisorController.GetReportStatistics();
+       
+        //Assert
+        var okResult = Assert.IsType<OkObjectResult>(reportStatisticsResult);
+        var  statisticsResult = Assert.IsAssignableFrom<TotalReportSummary>(okResult.Value);
+        Assert.NotNull(statisticsResult); 
+       
+       
     }
     [Fact]
-    public async Task Test_ReturnsOkWithReportSummaryList()
+    public async Task GetDeviceReportStatistics_ReturnsOk()
     {
         // Arrange
-        var mockConnectionFactory = new Mock<IDbConnectionFactory>();
-        var mockDbConnection = new Mock<IDbConnection>();
-        var reportsTotalCount = 30;
+        var configuration = new ConfigurationBuilder()
+            .SetBasePath(Directory.GetCurrentDirectory())
+            .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true)
+            .Build();
+        var _dbConnectionFactory = new SqlConnectionFactory(configuration);
+        var technicalSupervisorController = new TechnicalSupervisor_Controller(_dbConnectionFactory);
+        
+        //Act
+        var reportStatisticsResult = await technicalSupervisorController.GetDeviceReportStatistics("SN-L1-2");
+       
+        //Assert
+        var okResult = Assert.IsType<OkObjectResult>(reportStatisticsResult);
+        var  statisticsResult = Assert.IsAssignableFrom<TotalReportSummary>(okResult.Value);
+        Assert.NotNull(statisticsResult); 
+       
+       
+    }
+    [Fact]
+    public async Task GetDeviceReportStatistics_ReturnsBadRequest()
+    {
+        // Arrange
+        var configuration = new ConfigurationBuilder()
+            .SetBasePath(Directory.GetCurrentDirectory())
+            .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true)
+            .Build();
+        var _dbConnectionFactory = new SqlConnectionFactory(configuration);
+        var technicalSupervisorController = new TechnicalSupervisor_Controller(_dbConnectionFactory);
+        
+        //Act
+        var reportStatisticsResult = await technicalSupervisorController.GetDeviceReportStatistics("-1");
+       
+        //Assert
+        var badRequestObjectResult  = Assert.IsType<BadRequestObjectResult>(reportStatisticsResult);
+        Assert.Equal("No Reports or Device Found...", badRequestObjectResult.Value);
 
-        var reportsWithTypeCounts = new[]
-        {
-            new { ProblemType = "Hardware", Count = 10 },
-            new { ProblemType = "Software", Count = 20 }
-            // Add more test data if needed
-        };
+         
+       
+    }
 
-        mockConnectionFactory.Setup(f => f.CreateConnection()).Returns(mockDbConnection.Object);
-
-        mockDbConnection.SetupDapperAsync(conn => conn.QuerySingleAsync<int>(It.IsAny<string>(), null, null, null, null))
-            .ReturnsAsync(reportsTotalCount);
-
-        mockDbConnection.SetupDapperAsync(conn => conn.QueryAsync(
-                It.IsAny<string>(),
-                null,
-                null,
-                null,
-                null)
-            )
-            .ReturnsAsync(reportsWithTypeCounts.ToList());
-
-        var controller = new TechnicalSupervisor_Controller(mockConnectionFactory.Object);
-
-        // Act
-        var result = await controller.test();
-
-        // Assert
-        var okResult = Assert.IsType<OkObjectResult>(result);
-        var reportSummaryList = Assert.IsAssignableFrom<IEnumerable<object>>(okResult.Value);
-
-        // Assert the count of returned items
-        Assert.Equal(reportsWithTypeCounts.Length, reportSummaryList.Count());
-
-        // Assert specific items in the list
-        Assert.Equal(reportsWithTypeCounts[0].ProblemType, ((dynamic)reportSummaryList.First()).ProblemType);
-        Assert.Equal(reportsWithTypeCounts[0].Count, ((dynamic)reportSummaryList.First()).Count);
-        Assert.Equal(reportsWithTypeCounts[1].ProblemType, ((dynamic)reportSummaryList.Skip(1).First()).ProblemType);
-        Assert.Equal(reportsWithTypeCounts[1].Count, ((dynamic)reportSummaryList.Skip(1).First()).Count);
-    }*/
    [Fact]
    public async Task GetDevicesStatistics_ReturnsOk()
    {

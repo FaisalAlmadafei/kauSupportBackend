@@ -38,6 +38,23 @@ public class TechnicalSupervisor_Controller : Controller
             return BadRequest("No reports found...");
         }
     }
+    //-----------------------------------------------Get all reports----------------------------------------------------
+
+    [HttpGet]
+    [Route("GetRequests")]
+    public async Task<ActionResult> getRequests()
+    {
+        var conn = _dbConnectionFactory.CreateConnection();
+        var response = await conn.QueryAsync<Service>("select * from  [kauSupport].[dbo].[Services]");
+        if (response.Any())
+        {
+            return Ok(response);
+        }
+        else
+        {
+            return BadRequest("No requests found...");
+        }
+    }
 
     //----------------------------------------------Assign report to a technical member---------------------------------
     [HttpPut]
@@ -422,7 +439,7 @@ public class TechnicalSupervisor_Controller : Controller
             new { serialNumber = Serial_Number });
         if (reportsTotalCount <= 0)
         {
-            return BadRequest("No Reports Found...");
+            return BadRequest("No Reports or Device Found...");
         }
 
         // Query to get the count for each problem type of report

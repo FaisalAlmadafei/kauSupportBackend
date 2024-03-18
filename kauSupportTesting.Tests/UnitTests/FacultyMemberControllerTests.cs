@@ -484,7 +484,7 @@ namespace kauSupport.Tests
             // Check that the returned collection is not empty
             Assert.NotEmpty(returnedRequests);
         }
-
+        [Fact]
         public async Task GetMyRequests_ReturnsBadRequests()
         {
             // Arrange---------------------------------------------
