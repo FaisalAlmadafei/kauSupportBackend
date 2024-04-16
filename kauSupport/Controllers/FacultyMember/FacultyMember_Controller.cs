@@ -188,7 +188,7 @@ public class FacultyMember_Controller : ControllerBase
     //-------------------------------Method for requesting a service such as, unblocking react.js-----------------------
     [HttpPost]
     [Route("RequestService")]
-    public async Task<ActionResult> RequestService([Required] string Request_, [Required] string Requested_By)
+    public async Task<ActionResult> RequestService([Required] string Request_, [Required] string Requested_By , string Request_Type)
     {
                 var conn = _dbConnectionFactory.CreateConnection();
                 var supervisor = await conn.QueryFirstOrDefaultAsync<User>(
@@ -201,7 +201,7 @@ public class FacultyMember_Controller : ControllerBase
 
 
         var Request_Id = await conn.QuerySingleAsync<int>(
-            "INSERT INTO [kauSupport].[dbo].[services] (Request, RequestedBy, AssignedTo ,assignedToFirstName , assignedToLastName ,  requestedByFirstName  , requestedByLastName) VALUES (@Request , @RequestedBy, @AssignedTo, @assignedToFirstName , @assignedToLastName ,  @requestedByFirstName  , @requestedByLastName); SELECT CAST(SCOPE_IDENTITY() as int)",
+            "INSERT INTO [kauSupport].[dbo].[services] (Request, RequestedBy, AssignedTo ,assignedToFirstName , assignedToLastName ,  requestedByFirstName  , requestedByLastName, requestType) VALUES (@Request , @RequestedBy, @AssignedTo, @assignedToFirstName , @assignedToLastName ,  @requestedByFirstName  , @requestedByLastName , @requestType); SELECT CAST(SCOPE_IDENTITY() as int)",
             new
             {
                 Request = Request_,
@@ -210,7 +210,9 @@ public class FacultyMember_Controller : ControllerBase
                 assignedToFirstName = supervisor.firstName,
                 assignedToLastName = supervisor.lastName,
                 requestedByFirstName = FacultyMember.firstName,
-                requestedByLastName = FacultyMember.lastName
+                requestedByLastName = FacultyMember.lastName,
+                requestType = Request_Type
+                
             });
 
         if (Request_Id > 0)
