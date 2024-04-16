@@ -14,6 +14,7 @@ public class Service
         public string requestedByLastName { get; set; }
         public string   assignedToFirstName { get; set; }
         public string  assignedToLastName { get; set; }
+        public string  requestType { get; set; }
 
     
 }
