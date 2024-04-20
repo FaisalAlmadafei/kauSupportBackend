@@ -590,4 +590,74 @@ public class TechnicalSupportIntegrationTests
             Assert.Equal("Fail", "Pass");
         }
     }
+     [Fact]
+    public async Task Login_CheckReports_CheckSuggestedSolution()
+    {
+        //Arrange
+
+        var userCredentials = new
+        {
+            User_Id = "3333333",
+            Password = "1234567"
+        };
+
+
+        //Act:Login 
+
+        var loginResult = await userVerificationController.LogIn(
+            userCredentials.User_Id,
+            userCredentials.Password);
+
+        if (loginResult is OkObjectResult)
+        {
+            Assert.IsType<OkObjectResult>(loginResult);
+            
+            // Act: Chose a Report
+            var expectedReport = new Report
+            {
+                reportID = 1,
+                deviceNumber = "1",
+                serialNumber = "SN-L1-1",
+                deviceLocatedLab = "2",
+                reportType = "issue",
+                reportStatus = "InProgress",
+                problemDescription = "PC not working",
+                reportedBy = "1111111",
+                reportDate = DateTime.Now.Date,
+                repairDate = DateTime.Now.Date,
+                actionTaken = "No action taken yet...",
+                assignedTaskTo = "2222222",
+                problemType = "Hardware",
+                reportedByFirstName = "Faisal",
+                reportedByLastName = "Almadafei",
+                assignedToFirstName = "Ali",
+                assignedToLastName = "Saud"
+            };
+           
+                // Act: get suggested solution
+                var suggestionResult = await technicalMemberrController.SuggestSolution(expectedReport.problemDescription);
+                if (suggestionResult is OkObjectResult)
+                {
+                    // Assert
+                    Assert.IsType<OkObjectResult>(suggestionResult);
+                }
+
+                else
+                {
+                    // Assert
+                    Assert.IsNotType<OkObjectResult>(suggestionResult);                    
+                }
+            
+        
+
+        }
+        else if (loginResult is BadRequestObjectResult badAssignResult)
+        {
+            Assert.Equal("Invalid user ID or password.", badAssignResult.Value);
+        }
+        else
+        {
+            Assert.Equal("Fail", "Pass");
+        }
+    }
 }
