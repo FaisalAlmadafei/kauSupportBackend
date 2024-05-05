@@ -403,15 +403,15 @@ public class TechnicalSupervisor_Controller : Controller
 
         var reportsSummaryList = new List<ReportSummary>();
 
-        foreach (var report in reportsWithTypeCounts)
+        foreach (var Reportype in reportsWithTypeCounts)
         {
             reportsSummaryList.Add(
                 new ReportSummary
                 {
-                    problemType = report.problemType,
-                    Count = report.Count,
+                    problemType = Reportype.problemType,
+                    Count = Reportype.Count,
                     Percentage =
-                        ((double)report.Count / reportsTotalCount) *
+                        ((double)Reportype.Count / reportsTotalCount) *
                         100
                 }
             );
@@ -450,15 +450,15 @@ public class TechnicalSupervisor_Controller : Controller
 
         var reportsSummaryList = new List<ReportSummary>();
 
-        foreach (var report in reportsWithTypeCounts)
+        foreach (var Reportype in reportsWithTypeCounts)
         {
             reportsSummaryList.Add(
                 new ReportSummary
                 {
-                    problemType = report.problemType,
-                    Count = report.Count,
+                    problemType = Reportype.problemType,
+                    Count = Reportype.Count,
                     Percentage =
-                        ((double)report.Count / reportsTotalCount) *
+                        ((double)Reportype.Count / reportsTotalCount) *
                         100
                 }
             );
