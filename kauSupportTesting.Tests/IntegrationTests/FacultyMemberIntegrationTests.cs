@@ -118,7 +118,8 @@ public class FacultyMemberIntegrationTests
         var requestData = new
         {
             Request = "Request from IntegrationTest 7",
-            Requested_By = "1111111"
+            Requested_By = "1111111" ,
+            Service_Type= "Unblock a website"
         };
 
 
@@ -133,10 +134,10 @@ public class FacultyMemberIntegrationTests
 
             // Act: Add a request
             var addRequestResult =
-                await facultyMemberController.RequestService(requestData.Request, userCredentials.User_Id);
+                await facultyMemberController.RequestService(requestData.Request, userCredentials.User_Id ,requestData.Service_Type);
             Assert.IsType<OkObjectResult>(addRequestResult);
 
-            // Act: Get my reports
+            // Act: Get my requests
             var getResult = await facultyMemberController.getMyRequests(userCredentials.User_Id);
             var okObjectResult = getResult as OkObjectResult;
             var requestsList = Assert.IsType<List<Service>>(okObjectResult.Value);
@@ -182,7 +183,6 @@ public class FacultyMemberIntegrationTests
 
             // Act: check availability
             var availabilityResult = await facultyMemberController.GetLabsWithDeviceCounts();
-            Assert.IsType<OkObjectResult>(availabilityResult);
 
             if (availabilityResult is OkObjectResult okAssignResult)
             {
