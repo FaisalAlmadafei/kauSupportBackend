@@ -1,15 +1,12 @@
 using System.Data;
 using Dapper;
 using kauSupport.Connection;
-using kauSupport.Controllers.FacultyMember;
 using kauSupport.Controllers.TechnicalSupport;
-using kauSupport.Controllers.UserVerification;
 using kauSupport.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
 using Moq;
 using Moq.Dapper;
-using IConfiguration = Castle.Core.Configuration.IConfiguration;
 
 
 namespace kauSupport.Tests;
@@ -101,10 +98,11 @@ public class TechnicalSupervisorTests
             .SetBasePath(Directory.GetCurrentDirectory())
             .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true)
             .Build();
+        
         var _dbConnectionFactory = new SqlConnectionFactory(configuration);
         var technicalSupervisorController = new TechnicalSupervisor_Controller(_dbConnectionFactory);
         
-        // Act: Assign report 
+        // Act
         var assignResult = await technicalSupervisorController.AssignReport("2222222", 2453);
         
         //Assert
@@ -123,10 +121,11 @@ public class TechnicalSupervisorTests
             .SetBasePath(Directory.GetCurrentDirectory())
             .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true)
             .Build();
+        
         var _dbConnectionFactory = new SqlConnectionFactory(configuration);
         var technicalSupervisorController = new TechnicalSupervisor_Controller(_dbConnectionFactory);
         
-        // Act: Assign report 
+        // Act
         var assignResult = await technicalSupervisorController.AssignReport("2222222", -1);
         
         //Assert
@@ -195,6 +194,7 @@ public class TechnicalSupervisorTests
         mockConnection.SetupDapperAsync(conn => conn.QueryFirstOrDefaultAsync<User>(
                 It.IsAny<string>(), null, null, null, null))
             .ReturnsAsync(supervisor);
+        
         foreach (var device in devices)
         {
             reportID = reportID + 1;
@@ -433,29 +433,7 @@ public class TechnicalSupervisorTests
         var badRequestResult = Assert.IsType<BadRequestObjectResult>(result);
         Assert.Equal("No reports found...", badRequestResult.Value);
     }
-    /*[Fact]
-    public async Task CheckReport_ValidInput_ReturnsOk()
-    {
-        // Arrange
-        int reportId = 123; // Sample report ID
-        var mockConnectionFactory = new Mock<IDbConnectionFactory>();
-        var mockConnection = new Mock<IDbConnection>();
-
-        mockConnectionFactory.Setup(x => x.CreateConnection()).Returns(mockConnection.Object);
-        mockConnection.Setup(conn => conn.ExecuteAsync(
-                It.IsAny<string>(), It.IsAny<object>(), null, null, null))
-            .ReturnsAsync(1); // Simulate successful update (1 row affected)
-
-        var controller = new TechnicalSupervisor_Controller(mockConnectionFactory.Object);
-
-        // Act
-        var result = await controller.CheckReport(reportId);
-
-        // Assert
-        var okResult = Assert.IsType<OkObjectResult>(result);
-        Assert.Equal("Report checked", okResult.Value);
-    }
-*/
+    
     
     [Fact]
     public async Task AssignRequest_ReturnsOk()
@@ -664,6 +642,7 @@ public class TechnicalSupervisorTests
             .SetBasePath(Directory.GetCurrentDirectory())
             .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true)
             .Build();
+        
         var _dbConnectionFactory = new SqlConnectionFactory(configuration);
         var technicalSupervisorController = new TechnicalSupervisor_Controller(_dbConnectionFactory);
         
