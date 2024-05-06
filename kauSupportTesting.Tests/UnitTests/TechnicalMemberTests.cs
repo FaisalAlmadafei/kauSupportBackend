@@ -329,7 +329,6 @@ public class TechnicalMemberTests
         // Arrange
         var mockConnectionFactory = new Mock<IDbConnectionFactory>();
         var mockConnection = new Mock<IDbConnection>();
-
         var notificationsCount = 45;
 
         mockConnectionFactory.Setup(x => x.CreateConnection()).Returns(mockConnection.Object);
@@ -347,8 +346,7 @@ public class TechnicalMemberTests
         var okResult = Assert.IsType<OkObjectResult>(result);
         var returnedNotifications = Assert.IsType<int>(okResult.Value);
 
-        // Check if the returned list is not null
-        Assert.NotNull(returnedNotifications);
+     
     }
     //------------------------------------------------------------------------------------------------------------------
 
@@ -377,8 +375,7 @@ public class TechnicalMemberTests
         var okResult = Assert.IsType<OkObjectResult>(result);
         var returnedNotifications = Assert.IsType<int>(okResult.Value);
 
-        // Check if the returned list is not null
-        Assert.NotNull(returnedNotifications);
+      
     }
 
     //------------------------------------------------------------------------------------------------------------------
@@ -444,7 +441,6 @@ public class TechnicalMemberTests
         var exprectedReques = new List<Service>() ;
         mockConnectionFactory.Setup(x => x.CreateConnection()).Returns(mockConnection.Object);
 
-        // Simulate the scenario where the request is not found in the database
         mockConnection.SetupDapperAsync(c => c.QueryAsync<Service>(
                 It.IsAny<string>(), It.IsAny<object>(), null, null, null))
             .ReturnsAsync(exprectedReques);
