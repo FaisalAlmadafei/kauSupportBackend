@@ -25,20 +25,23 @@ namespace kauSupport.Tests
             var mockConnectionFactory = new Mock<IDbConnectionFactory>();
             var mockDbConnection = new Mock<IDbConnection>();
 
-            // Use any valid lab data for testing the structure
+                        // Expected fake data from the method
             var expectedLabs = new List<Lab>
             {
                 new Lab { labNumber = "1", labCapacity = 25, labLocation = "Building 31" },
-                // ... add more labs as needed for your test
+                
             };
 
+           
+             
+            var controller = new FacultyMember_Controller(mockConnectionFactory.Object);
+            
+                        // Mocking the Db connection and returning it
+            mockConnectionFactory.Setup(f => f.CreateConnection()).Returns(mockDbConnection.Object);
+            
+                       // Mocking the query to the Database
             mockDbConnection.SetupDapperAsync(conn => conn.QueryAsync<Lab>(It.IsAny<string>(), null, null, null, null))
                 .ReturnsAsync(expectedLabs);
-
-            mockConnectionFactory.Setup(f => f.CreateConnection()).Returns(mockDbConnection.Object);
-
-
-            var controller = new FacultyMember_Controller(mockConnectionFactory.Object);
 
             // Act
             var result = await controller.getLabs();
@@ -47,7 +50,7 @@ namespace kauSupport.Tests
             var okResult = Assert.IsType<OkObjectResult>(result);
             var returnedLabs = Assert.IsType<List<Lab>>(okResult.Value);
 
-            // Check that the returned collection is not empty
+                     // Check that the returned collection is not empty
             Assert.NotEmpty(returnedLabs);
         }
 
@@ -58,13 +61,16 @@ namespace kauSupport.Tests
             var mockConnectionFactory = new Mock<IDbConnectionFactory>();
             var mockDbConnection = new Mock<IDbConnection>();
 
-            // Use an empty list to simulate no labs returned
+                      // Use an empty list to simulate no labs returned
             var emptyLabs = new List<Lab>();
 
+            
+                    // Mocking the Db connection and returning it
+            mockConnectionFactory.Setup(f => f.CreateConnection()).Returns(mockDbConnection.Object);
+            
+                   // Mocking the query to the Database
             mockDbConnection.SetupDapperAsync(conn => conn.QueryAsync<Lab>(It.IsAny<string>(), null, null, null, null))
                 .ReturnsAsync(emptyLabs);
-
-            mockConnectionFactory.Setup(f => f.CreateConnection()).Returns(mockDbConnection.Object);
 
 
             var controller = new FacultyMember_Controller(mockConnectionFactory.Object);
@@ -75,6 +81,7 @@ namespace kauSupport.Tests
             // Assert
             var badRequestResult = Assert.IsType<BadRequestObjectResult>(result);
             Assert.Equal("No Labs found...", badRequestResult.Value);
+            
         }
 
         [Fact]
@@ -98,12 +105,13 @@ namespace kauSupport.Tests
                     nextPeriodicDate = DateTime.Parse("2024-09-06")
                 },
             };
+            
+            mockConnectionFactory.Setup(f => f.CreateConnection()).Returns(mockDbConnection.Object);
 
             mockDbConnection
                 .SetupDapperAsync(conn => conn.QueryAsync<Device>(It.IsAny<string>(), null, null, null, null))
                 .ReturnsAsync(expectedDevices);
 
-            mockConnectionFactory.Setup(f => f.CreateConnection()).Returns(mockDbConnection.Object);
 
             var controller = new FacultyMember_Controller(mockConnectionFactory.Object);
 
@@ -154,6 +162,9 @@ namespace kauSupport.Tests
             var expectedUser = new User
                 { UserId = "1234567", firstName = "Faisal", lastName = "Saud", email = "test@hotmail.com" };
             var expectedReportId = 1;
+            
+            mockConnectionFactory.Setup(f => f.CreateConnection()).Returns(mockDbConnection.Object);
+
 
             mockDbConnection.SetupDapperAsync(conn => conn.QueryFirstOrDefaultAsync<User>(
                     It.IsAny<string>(), null, null, null, null))
@@ -163,9 +174,7 @@ namespace kauSupport.Tests
                     It.IsAny<string>(), null, null, null, null))
                 .ReturnsAsync(expectedReportId);
 
-            // Setup the mock connection factory to return the mock connection
-            mockConnectionFactory.Setup(f => f.CreateConnection()).Returns(mockDbConnection.Object);
-
+            
             var controller = new FacultyMember_Controller(mockConnectionFactory.Object);
 
 
@@ -203,8 +212,8 @@ namespace kauSupport.Tests
                     reportStatus = "In Progress",
                     problemDescription = "PC not working",
                     reportedBy = "1111111",
-                    reportDate = DateTime.Now.Date, // Some past report date
-                    repairDate = DateTime.Now.Date, // Some future repair date
+                    reportDate = DateTime.Now.Date,
+                    repairDate = DateTime.Now.Date, 
                     actionTaken = "No Action taken yet...",
                     assignedTaskTo = "2222222",
                     problemType = "Hardware",
@@ -214,12 +223,12 @@ namespace kauSupport.Tests
                     assignedToLastName = "Almadafei"
                 },
             };
-
+            
+            mockConnectionFactory.Setup(f => f.CreateConnection()).Returns(mockDbConnection.Object);
             mockDbConnection
                 .SetupDapperAsync(conn => conn.QueryAsync<Report>(It.IsAny<string>(), null, null, null, null))
                 .ReturnsAsync(expectedReports);
 
-            mockConnectionFactory.Setup(f => f.CreateConnection()).Returns(mockDbConnection.Object);
 
             var controller = new FacultyMember_Controller(mockConnectionFactory.Object);
 
@@ -386,7 +395,7 @@ namespace kauSupport.Tests
             var controller = new FacultyMember_Controller(mockConnectionFactory.Object);
 
             // Act
-            var result = await controller.RequestService("Unblock React.js", mockFacultyMember.UserId);
+            var result = await controller.RequestService("Unblock React.js", mockFacultyMember.UserId , "Unblock a website");
 
             // Assert
             var okResult = Assert.IsType<OkObjectResult>(result);
@@ -413,7 +422,7 @@ namespace kauSupport.Tests
                 UserId = "1111111", firstName = "Ali", lastName = "Saad", role = "Faculty Member",
                 email = "test@hotmail.com"
             };
-            var requestId = 0;
+            var requestId = 0; //  If request Id <=0 it means that it didn't add the request correctly  
             mockDbConnection
                 .SetupDapperAsync(conn =>
                     conn.QueryFirstOrDefaultAsync<User>(It.IsAny<string>(), null, null, null, null))
@@ -433,7 +442,7 @@ namespace kauSupport.Tests
             var controller = new FacultyMember_Controller(mockConnectionFactory.Object);
 
             // Act
-            var result = await controller.RequestService("Unblock React.js", mockFacultyMember.UserId);
+            var result = await controller.RequestService("Unblock React.js", mockFacultyMember.UserId ,"Unblock a website");
 
             // Assert
             var badRequestResult = Assert.IsType<BadRequestObjectResult>(result);
@@ -510,59 +519,7 @@ namespace kauSupport.Tests
             Assert.Equal("You have not requested any service yet...", badRequestResult.Value);
         }
         
-        
-      /*  [Fact]
-        public async Task AddReport_And_CheckPreviousReports_ShouldReturnCorrectResults()
-        {
-            // Arrange
-            var configuration = new ConfigurationBuilder()
-                .SetBasePath(Directory.GetCurrentDirectory())
-                .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true)
-                .Build();
-
-            // Pass the configuration object to SqlConnectionFactory
-            var _dbConnectionFactory = new SqlConnectionFactory(configuration);
-
-            var controller = new FacultyMember_Controller(_dbConnectionFactory);
-
-            // Sample report data
-            var reportData = new
-            {
-                Device_Number = "3",
-                Serial_Number = "SN-L1-1",
-                Device_LocatedLab = "1",
-                Problem_Description = "PC not working integration testing",
-                Reported_By = "1111111", // Assuming a valid user ID
-                Problem_Type = "Hardware"
-            };
-
-            // Act: Add a report
-            await controller.addReport(
-                reportData.Device_Number,
-                reportData.Serial_Number,
-                reportData.Device_LocatedLab,
-                reportData.Problem_Description,
-                reportData.Reported_By,
-                reportData.Problem_Type);
-
-            // Act: Get previous reports
-            var getResult = await controller.getMyReports(reportData.Reported_By);
-            var okObjectResult = getResult as OkObjectResult;
-            var reportList = okObjectResult.Value as List<Report>;
-        
-            var addedReport = reportList.FirstOrDefault(r =>
-                r.deviceNumber == reportData.Device_Number &&
-                r.serialNumber == reportData.Serial_Number &&
-                r.deviceLocatedLab == reportData.Device_LocatedLab &&
-                r.problemDescription == reportData.Problem_Description &&
-                r.reportedBy == reportData.Reported_By &&
-                r.problemType == reportData.Problem_Type);
-
-            Assert.NotNull(addedReport);
-
-         
-        }
-*/
+     
     }
     
 
